@@ -80,16 +80,16 @@ https://adityaraj3136.github.io/netadmin-pro/
 ## 📸 Screenshots
 
 ### 🔐 Login Screen
-![Login Screen](screenshots/login.png)
+![Login Screen](screenshots/login.jpeg)
 
 ### 📊 Dashboard Overview
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](screenshots/dashboard.jpeg)
 
 ### 🗺️ Network Topology Map
-![Topology Map](screenshots/topology.png)
+![Topology Map](screenshots/topology.jpeg)
 
 ### 🌙 Dark Mode Interface
-![Dark Mode](screenshots/dark-mode.png)
+![Dark Mode](screenshots/darkmode.png)
 
 
 ## 📦 Installation & Local Setup
