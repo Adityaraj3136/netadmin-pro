@@ -1,16 +1,108 @@
-# React + Vite
+# NetAdmin Pro 🚀  
+### Virtual Router Management & Network Simulation Dashboardhttps://github.com/Adityaraj3136/netadmin-pro/tree/main
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+NetAdmin Pro is a **fully interactive, enterprise-style router management interface** built using modern frontend technologies.  
+It simulates real-world router functionalities such as WAN/LAN configuration, firewall rules, VPN setup, CLI commands, and network topology visualization — similar to professional router firmware (Cisco, MikroTik, OpenWRT).
 
-Currently, two official plugins are available:
+🔗 **Live Demo:**  
+https://adityaraj3136.github.io/netadmin-pro/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## ✨ Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🔐 Authentication
+- Secure admin login simulation
+- Session-based UI access 
 
-## Expanding the ESLint configuration
+### 🌐 Network Management
+- WAN configuration (DHCP / Static / PPPoE)
+- LAN & DHCP server settings
+- VLAN (802.1Q) configuration
+- Dynamic DNS (DDNS)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 📡 Wireless Management
+- Wi-Fi enable/disable
+- Security modes (Open / WPA2 / WPA3)
+- Guest network with isolation
+- Real-time Wi-Fi channel analyzer
+
+### 🧱 Security & Firewall
+- Stateful firewall toggle
+- Port forwarding rules
+- DoS / DDoS protection simulation
+- Parental control & scheduling
+
+### 🔒 VPN Server
+- WireGuard & OpenVPN UI
+- Client configuration generation
+
+### 🖥️ Client Monitoring
+- Connected devices (Wi-Fi / Ethernet)
+- Live bandwidth usage simulation
+- Block / unblock devices
+- Parental access rules
+
+### 🧠 System Tools
+- Built-in CLI terminal (ping, traceroute, reboot, reset)
+- Router reboot & factory reset simulation
+- Configuration backup & restore
+
+### 🗺️ Network Topology Map
+- Interactive visual topology
+- Internet → Router → Clients
+- Hover-based device details
+- Live packet animation
+
+### 🎮 Troubleshooting Mode
+- Gamified network fault scenarios
+- Diagnose and fix common network issues
+- Engineer-style problem solving
+
+### 🌙 UI / UX
+- Dark & light mode (firmware-style)
+- Responsive dashboard layout
+- Modern enterprise UI
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend:** React + Vite
+- **Styling:** Tailwind CSS (v3)
+- **Icons:** Lucide React
+- **State Management:** React Hooks
+- **Build Tool:** Vite
+- **Deployment:** GitHub Pages
+
+---
+
+## 📸 Screenshots
+
+### 🔐 Login Screen
+![Login Screen](screenshots/login.jpeg)
+
+### 📊 Dashboard Overview
+![Dashboard](screenshots/dashboard.jpeg)
+
+### 🗺️ Network Topology Map
+![Topology Map](screenshots/topology.jpeg)
+
+### 🌙 Dark Mode Interface
+![Dark Mode](screenshots/darkmode.png)
+
+
+## 📦 Installation & Local Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/adityaraj3136/netadmin-pro.git
+
+# Navigate to project folder
+cd netadmin-pro
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
