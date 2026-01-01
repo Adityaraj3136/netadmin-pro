@@ -13,7 +13,7 @@ https://adityaraj3136.github.io/netadmin-pro/
 
 ### 🔐 Authentication
 - Secure admin login simulation
-- Session-based UI access
+- Session-based UI access 
 
 ### 🌐 Network Management
 - WAN configuration (DHCP / Static / PPPoE)
