@@ -7,7 +7,7 @@ import {
   Cloud, Laptop, Share2, Sliders, Clock, Key, Layers, 
   BarChart2, AlertOctagon, Zap, Trash2, Plus, HardDrive, 
   Folder, FileText, Film, Music, Image as ImageIcon, Move,
-  User, ChevronDown, Edit2, Link, ClipboardList, Gauge, StopCircle, Video, Bell
+  User, ChevronDown, Edit2, Link, ClipboardList, Gauge, StopCircle, Video, Bell, Heart, Eye, EyeOff
 } from 'lucide-react';
 
 // --- UTILITIES & MOCK DATA ---
@@ -257,12 +257,21 @@ const Button = ({ children, onClick, variant = 'primary', icon: Icon, disabled, 
 };
 
 // --- SIMULATED TERMINAL ---
-const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role }) => {
+const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role, onLogout, onCliPasswordChange, setRebootReason }) => {
   const [history, setHistory] = useState([
     { type: 'info', text: `NetAdmin OS ${config.system.firmware} (Linux 5.10.0)` },
     { type: 'info', text: 'Type "help" for a list of commands.' }
   ]);
   const [input, setInput] = useState('');
+  const [cliState, setCliState] = useState('idle'); // idle, waiting_current_pass, waiting_new_pass
+  const [tempPass, setTempPass] = useState('');
+  
+  // New state for password confirmation modal
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [pendingNewPass, setPendingNewPass] = useState('');
+  const [showPassInModal, setShowPassInModal] = useState(false);
+  
   const endRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -271,12 +280,58 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role 
   }, [history]);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (!showConfirmModal) {
+        inputRef.current?.focus();
+    }
+  }, [showConfirmModal]);
 
   const handleCommand = (e) => {
     if (e.key === 'Enter') {
       const cmd = input.trim(); 
+      
+      // Handle Interactive States
+      if (cliState === 'waiting_update_pass') {
+          setHistory(prev => [...prev, { type: 'input', text: `password: ****` }]);
+          if (cmd === config.system.adminPassword) {
+              setHistory(prev => [...prev, { type: 'info', text: 'Authentication successful. Please confirm installation in the dialog.' }]);
+              setShowUpdateModal(true);
+              setCliState('idle');
+          } else {
+              setHistory(prev => [...prev, { type: 'error', text: 'Authentication failed. Update aborted.' }]);
+              setCliState('idle');
+          }
+          setInput('');
+          return;
+      }
+
+      if (cliState === 'waiting_current_pass') {
+          setHistory(prev => [...prev, { type: 'input', text: `(current) password: ****` }]);
+          if (cmd === config.system.adminPassword) {
+              setHistory(prev => [...prev, { type: 'info', text: 'Enter new password:' }]);
+              setCliState('waiting_new_pass');
+          } else {
+              setHistory(prev => [...prev, { type: 'error', text: 'Authentication failed.' }]);
+              setCliState('idle');
+          }
+          setInput('');
+          return;
+      }
+
+      if (cliState === 'waiting_new_pass') {
+          setHistory(prev => [...prev, { type: 'input', text: `(new) password: ****` }]);
+          if (cmd.length < 5) {
+              setHistory(prev => [...prev, { type: 'error', text: 'Password too short (min 5 chars).' }]);
+              setCliState('idle');
+          } else {
+              // Instead of updating immediately, show confirmation modal
+              setPendingNewPass(cmd);
+              setShowConfirmModal(true);
+              setCliState('idle');
+          }
+          setInput('');
+          return;
+      }
+
       const args = cmd.split(' ');
       const command = args[0].toLowerCase();
       
@@ -285,7 +340,7 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role 
 
       switch (command) {
         case 'help':
-          response = [{ type: 'info', text: 'Available commands:\n  ping <host>      Check network connectivity\n  traceroute <ip>  Trace path to host\n  ip addr          Show interface details\n  passwd <pass>    Change admin password\n  reboot           Restart the router\n  update           Check for firmware updates\n  reset -y         Factory reset device\n  clear            Clear terminal screen' }];
+          response = [{ type: 'info', text: 'Available commands:\n  ping <host>      Check network connectivity\n  traceroute <ip>  Trace path to host\n  ip addr          Show interface details\n  passwd           Change admin password\n  reboot           Restart the router\n  update           Check for firmware updates\n  reset -y         Factory reset device\n  clear            Clear terminal screen' }];
           break;
         case 'clear':
           setHistory([]); setInput(''); return;
@@ -303,11 +358,12 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role 
         case 'passwd':
            if (role !== ROLES.ADMIN) {
              response = [{ type: 'error', text: 'Permission denied: Admin privileges required' }];
-           } else if (!args[1]) {
-             response = [{ type: 'error', text: 'Usage: passwd <new_password>' }];
            } else {
-             updateConfig('system', 'adminPassword', args[1]);
-             response = [{ type: 'success', text: 'passwd: password updated successfully' }];
+             response = [{ type: 'info', text: 'Changing password for admin.' }];
+             setCliState('waiting_current_pass');
+             // We don't add the prompt to history yet, we render it in the input area or just wait for input
+             // But to mimic unix passwd, we usually see "Current password:"
+             response.push({ type: 'info', text: '(current) UNIX password:' });
            }
            break;
         case 'reboot':
@@ -322,9 +378,15 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role 
            if (role !== ROLES.ADMIN) {
              response = [{ type: 'error', text: 'Permission denied: Admin privileges required' }];
            } else {
-             response = [{ type: 'info', text: 'Connecting to update server... Connected.\nChecking firmware... Found v3.1.0-stable.\nDownloading image... [####################] 100%\nVerifying signature... OK.\nSystem configured to boot new image on restart.\nInitiating reboot sequence...' }];
-             updateConfig('system', 'firmware', 'v3.1.0-stable');
-             setTimeout(() => setRebooting(true), 3000);
+             if (config.system.firmware === 'v3.1.0-stable') {
+                 response = [{ type: 'info', text: 'Checking for firmware updates... System is up to date (v3.1.0-stable).' }];
+             } else {
+                 response = [
+                     { type: 'info', text: 'Checking for firmware updates... Found v3.1.0-stable.' },
+                     { type: 'info', text: 'Enter admin password to proceed:' }
+                 ];
+                 setCliState('waiting_update_pass');
+             }
            }
            break;
         case 'reset':
@@ -346,15 +408,18 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role 
   };
 
   return (
+    <>
     <div 
-      className="bg-slate-950 text-green-500 font-mono p-4 rounded-lg shadow-inner h-96 overflow-y-auto text-sm border border-slate-700 cursor-text"
+      className="bg-slate-950 text-green-500 font-mono p-4 rounded-lg shadow-inner h-96 overflow-y-auto text-sm border border-slate-700 cursor-text relative"
       onClick={() => inputRef.current?.focus()}
     >
       {history.map((line, i) => (
         <div key={i} className={`mb-1 ${line.type === 'error' ? 'text-red-400' : line.type === 'warning' ? 'text-yellow-400' : line.type === 'input' ? 'text-white' : ''} whitespace-pre-wrap`}>{line.text}</div>
       ))}
       <div className="flex flex-row items-center">
-        <span className="shrink-0 mr-2 text-blue-400 font-bold">admin@{config.system.hostname}:~#</span>
+        <span className="shrink-0 mr-2 text-blue-400 font-bold">
+            {cliState === 'idle' ? `admin@${config.system.hostname}:~#` : '>'}
+        </span>
         <input 
           ref={inputRef}
           className="flex-1 bg-transparent border-none focus:outline-none text-white p-0 m-0 w-full font-mono" 
@@ -364,10 +429,110 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role 
           autoFocus 
           autoComplete="off"
           spellCheck="false"
+          type={cliState !== 'idle' ? "password" : "text"}
         />
       </div>
       <div ref={endRef} />
     </div>
+
+    {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Confirm New Password</h3>
+                <div className="mb-4">
+                    <label className="block text-xs text-slate-500 mb-1">New Password</label>
+                    <div className="flex gap-2">
+                        <input 
+                            type={showPassInModal ? "text" : "password"} 
+                            value={pendingNewPass} 
+                            readOnly 
+                            className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200"
+                        />
+                        <button 
+                            onClick={() => setShowPassInModal(!showPassInModal)}
+                            className="p-2 text-slate-500 hover:text-blue-500"
+                        >
+                            {showPassInModal ? <EyeOff size={18}/> : <Eye size={18}/>}
+                        </button>
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                    <button 
+                        onClick={() => {
+                            setShowConfirmModal(false);
+                            setHistory(prev => [...prev, { type: 'error', text: 'Operation cancelled by user.' }]);
+                            setPendingNewPass('');
+                        }}
+                        className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={() => {
+                            if (onCliPasswordChange) {
+                                onCliPasswordChange(pendingNewPass);
+                            } else {
+                                updateConfig('system', 'adminPassword', pendingNewPass);
+                            }
+                            setHistory(prev => [...prev, { type: 'success', text: 'passwd: password updated successfully.\nLogging out...' }]);
+                            setShowConfirmModal(false);
+                            setTimeout(() => {
+                                if (onLogout) onLogout();
+                            }, 1500);
+                        }}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded"
+                    >
+                        Confirm & Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    )}
+
+    {showUpdateModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700">
+                <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Firmware Update Available</h3>
+                <div className="mb-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Current Version:</span>
+                        <span className="font-mono text-slate-700 dark:text-slate-300">{config.system.firmware}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">New Version:</span>
+                        <span className="font-mono text-green-600 font-bold">v3.1.0-stable</span>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded text-xs text-yellow-800 dark:text-yellow-200 mt-2">
+                        Warning: System will reboot automatically after installation. Network connectivity will be interrupted.
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                    <button 
+                        onClick={() => {
+                            setShowUpdateModal(false);
+                            setHistory(prev => [...prev, { type: 'error', text: 'Update cancelled by user.' }]);
+                        }}
+                        className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setShowUpdateModal(false);
+                            setHistory(prev => [...prev, { type: 'info', text: 'Downloading image... [####################] 100%\nVerifying signature... OK.\nSystem configured to boot new image on restart.\nInitiating reboot sequence...' }]);
+                            updateConfig('system', 'firmware', 'v3.1.0-stable', true);
+                            if (setRebootReason) setRebootReason('update');
+                            setTimeout(() => setRebooting(true), 3000);
+                        }}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                        Install & Reboot
+                    </button>
+                </div>
+            </div>
+        </div>
+    )}
+    </>
   );
 };
 
@@ -442,7 +607,12 @@ export default function App() {
   const [configHistory, setConfigHistory] = useState([]);
   const [rollbackTimer, setRollbackTimer] = useState(null);
   const [showRollbackModal, setShowRollbackModal] = useState(false);
+  const [postConfirmAction, setPostConfirmAction] = useState(null); // 'reboot', 'logout', or null
   
+  // Reset App Data State
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetKey, setResetKey] = useState('');
+
   const [clients, setClients] = useState(DEFAULT_CLIENTS);
   
   // Real-time Simulation State
@@ -613,27 +783,8 @@ export default function App() {
       })));
       setUserSignalStrength(prev => Math.max(60, Math.min(98, prev + (Math.random() - 0.5) * 5)));
 
-      // 5. Speed Test Logic
-      if (speedTest.status === 'running') {
-        setSpeedTest(prev => {
-           let next = { ...prev };
-           next.progress += 2;
-           
-           if (next.progress < 20) {
-               next.ping = Math.floor(Math.random() * 20) + 5;
-           } else if (next.progress < 60) {
-               next.download = Math.floor(Math.random() * 300) + 100 + Math.floor(Math.random() * 50);
-           } else if (next.progress < 90) {
-               next.upload = Math.floor(Math.random() * 100) + 20 + Math.floor(Math.random() * 30);
-           }
-           
-           if (next.progress >= 100) {
-               next.status = 'complete';
-               next.progress = 100;
-           }
-           return next;
-        });
-      }
+      // 5. Speed Test Logic (Moved to separate effect for smoother animation)
+      // if (speedTest.status === 'running') { ... }
 
       // 6. Packet Sniffer Logic
       if (sniffer.active) {
@@ -799,6 +950,8 @@ export default function App() {
     return () => clearInterval(interval);
   }, [rebooting, isLoggedIn, speedTest.status, sniffer.active]); 
 
+  const [rebootReason, setRebootReason] = useState('manual'); // 'manual' or 'update'
+
   // Reboot Loop
   useEffect(() => {
     if (rebooting) {
@@ -808,13 +961,19 @@ export default function App() {
             setRebooting(false);
             setRebootProgress(0);
             setUptime(0); // Reset uptime to 0 after reboot
-            setSystemStats({ cpu: 5, mem: 20 }); // Reset stats to low
+            setSystemStats({ cpu: 5, mem: 20, temp: 40, diskHealth: 'Good' }); // Reset stats to low
             
             // Logout user after reboot
             setIsLoggedIn(false);
             setSession(null);
+            setLoginForm({ username: '', password: '' }); // Clear login form
             
-            showToast('Router rebooted successfully', 'success');
+            if (rebootReason === 'update') {
+                showToast('Firmware updated successfully', 'success');
+            } else {
+                showToast('Router rebooted successfully', 'success');
+            }
+            setRebootReason('manual'); // Reset reason
             clearInterval(interval);
             return 0;
           }
@@ -823,12 +982,75 @@ export default function App() {
       }, 200);
       return () => clearInterval(interval);
     }
-  }, [rebooting]);
+  }, [rebooting, rebootReason]);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  // Dedicated Speed Test Effect (Smoother Animation)
+  useEffect(() => {
+      if (speedTest.status !== 'running') return;
+
+      const interval = setInterval(() => {
+          setSpeedTest(prev => {
+              let next = { ...prev };
+              next.progress += 0.5; // Slower progress increment for smoother animation (200 ticks total)
+
+              // Phase 1: Ping (0-20%)
+              if (next.progress < 20) {
+                  // Jitter around 12ms
+                  next.ping = Math.max(5, 12 + (Math.random() * 4 - 2));
+              } 
+              // Phase 2: Download (20-60%)
+              else if (next.progress < 60) {
+                  const targetSpeed = 350; // Target 350 Mbps
+                  const currentSpeed = prev.download || 0;
+                  
+                  // Ramp up logic: Accelerate towards target
+                  // If far from target, accelerate fast. If close, slow down.
+                  const diff = targetSpeed - currentSpeed;
+                  const increment = diff * 0.05 + (Math.random() * 10); 
+                  
+                  next.download = Math.min(targetSpeed + 20, currentSpeed + increment);
+                  
+                  // Add some noise if we are near the top
+                  if (next.download > 300) {
+                      next.download += (Math.random() * 10 - 5);
+                  }
+              } 
+              // Phase 3: Upload (60-90%)
+              else if (next.progress < 90) {
+                  const targetSpeed = 150; // Target 150 Mbps
+                  const currentSpeed = prev.upload || 0;
+                  
+                  // Ramp up logic
+                  const diff = targetSpeed - currentSpeed;
+                  const increment = diff * 0.05 + (Math.random() * 5);
+                  
+                  next.upload = Math.min(targetSpeed + 10, currentSpeed + increment);
+                  
+                  if (next.upload > 120) {
+                      next.upload += (Math.random() * 5 - 2.5);
+                  }
+              }
+              
+              // Ensure integers for display
+              next.ping = Math.floor(next.ping);
+              next.download = Math.floor(next.download);
+              next.upload = Math.floor(next.upload);
+
+              if (next.progress >= 100) {
+                  next.status = 'complete';
+                  next.progress = 100;
+              }
+              return next;
+          });
+      }, 50); // Run every 50ms for 20fps animation
+
+      return () => clearInterval(interval);
+  }, [speedTest.status]);
 
   const addNotification = (title, message, type = 'info') => {
       const id = Date.now();
@@ -899,6 +1121,7 @@ export default function App() {
       const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
       setSession({ user: user.username, role: user.role, token, expiry });
       setIsLoggedIn(true);
+      setActiveTab('dashboard');
       setLoginError('');
       setLoginAttempts({ count: 0, lockUntil: null });
       addAuditLog('User Login', `User ${user.username} logged in successfully`);
@@ -928,7 +1151,7 @@ export default function App() {
     showToast('Logged out successfully', 'info');
   };
 
-  const updateConfig = (section, key, value) => {
+  const updateConfig = (section, key, value, immediateApply = false) => {
     // CSRF & RBAC Protection
     if (!session?.token) {
         showToast('Security Alert: Invalid Session Token (CSRF Blocked)', 'danger');
@@ -941,7 +1164,13 @@ export default function App() {
     }
     setConfig(prev => {
       const next = { ...prev, [section]: { ...prev[section], [key]: value } };
-      setIsConfigDirty(JSON.stringify(next) !== JSON.stringify(lastAppliedConfig));
+      
+      if (immediateApply) {
+          setLastAppliedConfig(next);
+          setIsConfigDirty(false);
+      } else {
+          setIsConfigDirty(JSON.stringify(next) !== JSON.stringify(lastAppliedConfig));
+      }
       return next;
     });
   };
@@ -951,6 +1180,14 @@ export default function App() {
       if (cfg.lan.ip === cfg.wan.ip) errors.push("LAN IP cannot match WAN IP");
       if (cfg.wireless.security !== 'none' && cfg.wireless.password.length < 8) errors.push("Wi-Fi password too weak");
       return errors;
+  };
+
+  const handleFactoryReset = () => {
+      setConfig(DEFAULT_CONFIG);
+      setLastAppliedConfig(DEFAULT_CONFIG);
+      setIsConfigDirty(false);
+      showToast('Factory Reset Complete', 'success');
+      setRebooting(true);
   };
 
   const handleApplyConfig = () => {
@@ -963,6 +1200,14 @@ export default function App() {
           showToast('Access Denied: Admin privileges required', 'danger');
           return;
       }
+
+      // Check if changes were actually made
+      if (JSON.stringify(config) === JSON.stringify(lastAppliedConfig)) {
+          showToast('No changes detected.', 'info');
+          setPostConfirmAction(null);
+          return;
+      }
+
       const errors = validateConfig(config);
       if (errors.length > 0) {
           showToast(errors.join(', '), 'danger');
@@ -978,6 +1223,7 @@ export default function App() {
 
   const revertConfig = () => {
       setShowRollbackModal(false);
+      setPostConfirmAction(null);
       setConfigHistory(prev => {
           const safeConfig = prev[0] || DEFAULT_CONFIG;
           setConfig(safeConfig);
@@ -992,6 +1238,18 @@ export default function App() {
       setShowRollbackModal(false);
       showToast('Configuration confirmed.', 'success');
       addAuditLog('Config Apply', 'Configuration applied and confirmed');
+      
+      if (postConfirmAction === 'reboot') {
+          showToast('Rebooting system...', 'warning');
+          setTimeout(() => setRebooting(true), 1500);
+      } else if (postConfirmAction === 'logout') {
+          showToast('Logging out for security...', 'warning');
+          setTimeout(() => {
+              setIsLoggedIn(false);
+              setSession(null);
+          }, 1500);
+      }
+      setPostConfirmAction(null);
   };
 
   // Rollback Timer Effect
@@ -1007,7 +1265,10 @@ export default function App() {
       return () => clearInterval(interval);
   }, [showRollbackModal, rollbackTimer]);
 
-  const handleSave = () => handleApplyConfig();
+  const handleSave = () => {
+      setPostConfirmAction('logout');
+      handleApplyConfig();
+  };
 
   // Parental Control Handlers
   const openAddRuleModal = () => {
@@ -2515,7 +2776,10 @@ key client.key`}</pre>
             </div>
             <div className="space-y-4">
                <h4 className="font-medium text-slate-800 dark:text-slate-200">Operations</h4>
-               <Button variant="danger" className="w-full justify-center" icon={RefreshCw} onClick={() => setRebooting(true)} disabled={session?.role !== ROLES.ADMIN}>Reboot Router</Button>
+               <Button variant="danger" className="w-full justify-center" icon={RefreshCw} onClick={() => {
+                   setRebootReason('manual');
+                   setRebooting(true);
+               }} disabled={session?.role !== ROLES.ADMIN}>Reboot Router</Button>
                <Button variant="danger" className="w-full justify-center" icon={AlertTriangle} onClick={() => {setConfig(DEFAULT_CONFIG); showToast('Reset to Factory Defaults', 'success'); setRebooting(true);}} disabled={session?.role !== ROLES.ADMIN}>Factory Reset</Button>
             </div>
          </div>
@@ -2563,25 +2827,29 @@ key client.key`}</pre>
                     
                     updateConfig('system', 'adminPassword', passwordForm.new);
                     setPasswordForm({ current: '', new: '', confirm: '' });
-                    showToast('Password updated successfully', 'success');
+                    
+                    // Trigger Rollback/Confirm Flow before Reboot
+                    setPostConfirmAction('reboot');
+                    setTimeout(() => handleApplyConfig(), 100);
                   }}>Update Password</Button>
                </div>
             </div>
          </div>
       </Card>
-      
+
       <Card title="CLI Terminal">
-        <TerminalCLI 
-          config={config} 
-          updateConfig={updateConfig} 
-          setRebooting={setRebooting}
-          role={session?.role}
-          onFactoryReset={() => {
-             setConfig(DEFAULT_CONFIG);
-             showToast('Reset to Factory Defaults', 'success');
-             setRebooting(true);
-          }}
-        />
+          <TerminalCLI 
+              config={config} 
+              updateConfig={updateConfig} 
+              setRebooting={setRebooting} 
+              onFactoryReset={handleFactoryReset}
+              role={session?.role}
+              onLogout={handleLogout}
+              onCliPasswordChange={(newPass) => {
+                  updateConfig('system', 'adminPassword', newPass, true);
+              }}
+              setRebootReason={setRebootReason}
+          />
       </Card>
     </div>
   );
@@ -2877,7 +3145,7 @@ key client.key`}</pre>
 
              {/* NODE: Internet */}
              <div 
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-help z-10 flex flex-col items-center group" 
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 flex flex-col items-center group" 
                 style={{ left: `${nodes.internet.x}%`, top: `${nodes.internet.y}%` }} 
                 onMouseEnter={() => setHoveredNode({ type: 'internet' })}
                 onMouseLeave={() => setHoveredNode(null)}
@@ -2894,7 +3162,7 @@ key client.key`}</pre>
 
              {/* NODE: Router */}
              <div 
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-help z-20 flex flex-col items-center group" 
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 flex flex-col items-center group" 
                 style={{ left: `${nodes.router.x}%`, top: `${nodes.router.y}%` }} 
                 onMouseEnter={() => setHoveredNode({ type: 'router' })}
                 onMouseLeave={() => setHoveredNode(null)}
@@ -2921,7 +3189,7 @@ key client.key`}</pre>
                  return (
                      <div 
                         key={node.id} 
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-help z-10 flex flex-col items-center group" 
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 flex flex-col items-center group" 
                         style={{ left: `${node.x}%`, top: `${node.y}%` }} 
                         onMouseEnter={() => setHoveredNode({ type: 'clients', id: node.id })}
                         onMouseLeave={() => setHoveredNode(null)}
@@ -2997,7 +3265,8 @@ key client.key`}</pre>
   // --- LOGIN SCREEN ---
   if (!isLoggedIn) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-100'}`}>
+      <div className={`fixed inset-0 overflow-y-auto [&::-webkit-scrollbar]:hidden transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-slate-100'}`} style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+         <div className="min-h-full flex items-center justify-center p-4">
          {/* Toast container for login screen */}
          {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded shadow-lg text-white text-sm font-medium animate-bounce-in ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'danger' ? 'bg-red-600' : 'bg-blue-600'}`}>{toast.message}</div>}
          
@@ -3060,8 +3329,56 @@ key client.key`}</pre>
                <div className="mt-6 text-center text-xs text-slate-400">
                   <p>Default Access: admin / admin</p>
                   <p className="mt-1">Firmware: {config.system.firmware}</p>
+                  <button 
+                    type="button"
+                    onClick={() => setShowResetModal(true)}
+                    className="mt-4 text-red-400 hover:text-red-500 underline"
+                  >
+                    Reset App Data
+                  </button>
                </div>
             </div>
+            <div className="bg-slate-50 dark:bg-slate-900 p-4 text-center border-t border-slate-200 dark:border-slate-700">
+                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">
+                    Made with <Heart size={12} className="text-red-500 fill-red-500" /> by Aditya Raj
+                </p>
+            </div>
+         </div>
+
+         {/* Reset Data Modal */}
+         {showResetModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <div className="p-6">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Reset Login Data</h3>
+                        <p className="text-sm text-slate-500 mb-4">This will reset the administrator password to default ('admin'). Enter access key to confirm.</p>
+                        <Input 
+                            label="Access Key" 
+                            type="password" 
+                            placeholder="Enter key..." 
+                            value={resetKey} 
+                            onChange={(e) => setResetKey(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="secondary" onClick={() => { setShowResetModal(false); setResetKey(''); }}>Cancel</Button>
+                            <Button variant="danger" onClick={() => {
+                                if (resetKey === 'reset123') { // Simple hardcoded key for demo
+                                    setConfig(prev => ({
+                                        ...prev,
+                                        system: { ...prev.system, adminPassword: DEFAULT_CONFIG.system.adminPassword }
+                                    }));
+                                    setShowResetModal(false);
+                                    setResetKey('');
+                                    showToast('Login password reset to default', 'success');
+                                } else {
+                                    showToast('Invalid Access Key', 'danger');
+                                }
+                            }}>Reset Password</Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+         )}
          </div>
       </div>
     );
