@@ -7,7 +7,7 @@ import {
   Cloud, Laptop, Share2, Sliders, Clock, Key, Layers, 
   BarChart2, AlertOctagon, Zap, Trash2, Plus, HardDrive, 
   Folder, FileText, Film, Music, Image as ImageIcon, Move,
-  User, ChevronDown, Edit2, Link
+  User, ChevronDown, Edit2, Link, ClipboardList, Gauge, StopCircle, Video, Bell
 } from 'lucide-react';
 
 // --- UTILITIES & MOCK DATA ---
@@ -92,7 +92,13 @@ const DEFAULT_CONFIG = {
     enabled: false,
     uploadLimit: 0,
     downloadLimit: 0,
-    priorities: []
+    priorities: [
+        { id: 'zoom', name: 'Zoom / Video Conferencing', priority: 'high' },
+        { id: 'gaming', name: 'Online Gaming', priority: 'high' },
+        { id: 'streaming', name: 'Video Streaming (YouTube/Netflix)', priority: 'medium' },
+        { id: 'web', name: 'Web Browsing', priority: 'normal' },
+        { id: 'downloads', name: 'File Downloads', priority: 'low' }
+    ]
   },
   parental: {
     enabled: false,
@@ -124,10 +130,10 @@ const DEFAULT_CONFIG = {
 };
 
 const DEFAULT_CLIENTS = [
-  { id: 1, name: 'John-iPhone', ip: '192.168.1.101', mac: 'AA:BB:CC:11:22:33', type: 'wifi', status: 'online', blocked: false, usage: 15 },
-  { id: 2, name: 'LivingRoom-TV', ip: '192.168.1.102', mac: 'AA:BB:CC:44:55:66', type: 'ethernet', status: 'online', blocked: false, usage: 85 },
-  { id: 3, name: 'Unknown-Device', ip: '192.168.1.105', mac: '11:22:33:44:55:66', type: 'wifi', status: 'offline', blocked: true, usage: 0 },
-  { id: 4, name: 'Gaming-PC', ip: '192.168.1.110', mac: 'DD:EE:FF:77:88:99', type: 'ethernet', status: 'online', blocked: false, usage: 120 },
+  { id: 1, name: 'John-iPhone', ip: '192.168.1.101', mac: 'AA:BB:CC:11:22:33', type: 'wifi', status: 'online', blocked: false, usage: 15, priority: 'normal', downLimit: 0, upLimit: 0 },
+  { id: 2, name: 'LivingRoom-TV', ip: '192.168.1.102', mac: 'AA:BB:CC:44:55:66', type: 'ethernet', status: 'online', blocked: false, usage: 85, priority: 'high', downLimit: 0, upLimit: 0 },
+  { id: 3, name: 'Unknown-Device', ip: '192.168.1.105', mac: '11:22:33:44:55:66', type: 'wifi', status: 'offline', blocked: true, usage: 0, priority: 'normal', downLimit: 5, upLimit: 1 },
+  { id: 4, name: 'Gaming-PC', ip: '192.168.1.110', mac: 'DD:EE:FF:77:88:99', type: 'ethernet', status: 'online', blocked: false, usage: 120, priority: 'high', downLimit: 0, upLimit: 0 },
 ];
 
 const SCENARIOS = [
@@ -159,6 +165,18 @@ const MOCK_FILES = [
   { name: 'Movies', type: 'folder', size: 0, date: '2023-10-05' },
   { name: 'network_config_v2.json', type: 'file', size: 2048, date: '2023-10-25' },
   { name: 'vacation_photo.jpg', type: 'file', size: 4500000, date: '2023-09-15' },
+];
+
+const ROLES = {
+  ADMIN: 'admin',
+  OPERATOR: 'operator',
+  VIEWER: 'viewer'
+};
+
+const DEFAULT_USERS = [
+  { username: 'admin', password: 'admin', role: ROLES.ADMIN },
+  { username: 'operator', password: 'operator', role: ROLES.OPERATOR },
+  { username: 'viewer', password: 'viewer', role: ROLES.VIEWER }
 ];
 
 // --- COMPONENTS ---
@@ -239,7 +257,7 @@ const Button = ({ children, onClick, variant = 'primary', icon: Icon, disabled, 
 };
 
 // --- SIMULATED TERMINAL ---
-const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset }) => {
+const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role }) => {
   const [history, setHistory] = useState([
     { type: 'info', text: `NetAdmin OS ${config.system.firmware} (Linux 5.10.0)` },
     { type: 'info', text: 'Type "help" for a list of commands.' }
@@ -252,7 +270,6 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset }) => 
     endRef.current?.scrollIntoView({ behavior: 'smooth' }); 
   }, [history]);
 
-  // Auto-focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -284,7 +301,9 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset }) => 
            if (args[1] === 'addr' || !args[1]) response = [{ type: 'info', text: `eth0 (WAN): ${config.wan.ip}/24 UP\n    link/ether ${config.wan.mac || 'AA:BB:CC:DD:EE:01'} brd ff:ff:ff:ff:ff:ff\nbr0 (LAN): ${config.lan.ip}/24 UP\n    link/ether ${config.wan.mac || 'AA:BB:CC:DD:EE:02'} brd ff:ff:ff:ff:ff:ff` }];
            break;
         case 'passwd':
-           if (!args[1]) {
+           if (role !== ROLES.ADMIN) {
+             response = [{ type: 'error', text: 'Permission denied: Admin privileges required' }];
+           } else if (!args[1]) {
              response = [{ type: 'error', text: 'Usage: passwd <new_password>' }];
            } else {
              updateConfig('system', 'adminPassword', args[1]);
@@ -292,15 +311,26 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset }) => 
            }
            break;
         case 'reboot':
-           response = [{ type: 'warning', text: 'Broadcast message from root@NetAdmin-Pro-X1:\nThe system is going down for reboot NOW!' }];
-           setTimeout(() => setRebooting(true), 1500);
+           if (role !== ROLES.ADMIN) {
+             response = [{ type: 'error', text: 'Permission denied: Admin privileges required' }];
+           } else {
+             response = [{ type: 'warning', text: 'Broadcast message from root@NetAdmin-Pro-X1:\nThe system is going down for reboot NOW!' }];
+             setTimeout(() => setRebooting(true), 1500);
+           }
            break;
         case 'update':
-           response = [{ type: 'info', text: 'Connecting to update server... Connected.\nChecking firmware... Found v3.1.0-stable.\nDownloading image... [####################] 100%\nVerifying signature... OK.\nSystem configured to boot new image on restart.' }];
-           updateConfig('system', 'firmware', 'v3.1.0-stable');
+           if (role !== ROLES.ADMIN) {
+             response = [{ type: 'error', text: 'Permission denied: Admin privileges required' }];
+           } else {
+             response = [{ type: 'info', text: 'Connecting to update server... Connected.\nChecking firmware... Found v3.1.0-stable.\nDownloading image... [####################] 100%\nVerifying signature... OK.\nSystem configured to boot new image on restart.\nInitiating reboot sequence...' }];
+             updateConfig('system', 'firmware', 'v3.1.0-stable');
+             setTimeout(() => setRebooting(true), 3000);
+           }
            break;
         case 'reset':
-           if (args[1] === '-y') {
+           if (role !== ROLES.ADMIN) {
+             response = [{ type: 'error', text: 'Permission denied: Admin privileges required' }];
+           } else if (args[1] === '-y') {
              response = [{ type: 'warning', text: 'Erasing nvram... Done.\nRestoring factory defaults...' }];
              setTimeout(onFactoryReset, 1500);
            } else {
@@ -358,6 +388,10 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
+  // NEW AUTH STATE
+  const [session, setSession] = useState(null);
+  const [loginAttempts, setLoginAttempts] = useState({ count: 0, lockUntil: null });
+
   // Parental Control Modal State
   const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
   const [currentRuleId, setCurrentRuleId] = useState(null);
@@ -382,20 +416,64 @@ export default function App() {
   const [activeScenario, setActiveScenario] = useState(null);
   const [scenarioSolved, setScenarioSolved] = useState(false);
 
+  // Tools: Speed Test & Sniffer State
+  const [speedTest, setSpeedTest] = useState({ status: 'idle', progress: 0, ping: 0, download: 0, upload: 0 });
+  const [sniffer, setSniffer] = useState({ active: false, packets: [] });
+  const [logs, setLogs] = useState([
+    { id: 1, time: new Date().toISOString(), severity: 'Info', facility: 'System', msg: 'System started successfully' },
+    { id: 2, time: new Date(Date.now() - 50000).toISOString(), severity: 'Info', facility: 'WAN', msg: 'WAN IP acquired: 192.0.2.45' },
+    { id: 3, time: new Date(Date.now() - 100000).toISOString(), severity: 'Warning', facility: 'WiFi', msg: 'Channel interference detected on Ch 6' },
+  ]);
+
   // Core Router State
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem('routerConfig');
-    return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        // Deep merge or ensure new keys exist
+        return { ...DEFAULT_CONFIG, ...parsed, qos: parsed.qos || DEFAULT_CONFIG.qos };
+    }
+    return DEFAULT_CONFIG;
   });
+
+  // Config Engine State
+  const [lastAppliedConfig, setLastAppliedConfig] = useState(config);
+  const [isConfigDirty, setIsConfigDirty] = useState(false);
+  const [configHistory, setConfigHistory] = useState([]);
+  const [rollbackTimer, setRollbackTimer] = useState(null);
+  const [showRollbackModal, setShowRollbackModal] = useState(false);
   
   const [clients, setClients] = useState(DEFAULT_CLIENTS);
   
   // Real-time Simulation State
   const [trafficHistory, setTrafficHistory] = useState(Array(60).fill({ up: 0, down: 0 }));
   const [dpiData, setDpiData] = useState({ streaming: 30, gaming: 10, web: 40, others: 20 });
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('24h');
+
+  // Mock Data for Analytics (Moved to top level to avoid Hook errors)
+  const analyticsData = React.useMemo(() => {
+      const points = analyticsPeriod === '24h' ? 24 : analyticsPeriod === '7d' ? 7 : 30;
+      return Array.from({length: points}, (_, i) => ({
+          label: analyticsPeriod === '24h' ? `${i}:00` : analyticsPeriod === '7d' ? `Day ${i+1}` : `${i+1}`,
+          down: Math.floor(Math.random() * 80) + 20,
+          up: Math.floor(Math.random() * 40) + 5
+      }));
+  }, [analyticsPeriod]);
+
+  // Memoize client usage to prevent jitter (Moved to top level)
+  const clientUsage = React.useMemo(() => {
+      // Generate usage for all clients and sort by highest usage first
+      const allClientsWithUsage = clients.map(c => ({
+          ...c,
+          usage: Math.floor(Math.random() * 500) + 50
+      }));
+      return allClientsWithUsage.sort((a, b) => b.usage - a.usage).slice(0, 3);
+  }, [clients]);
   
   // Dynamic System Stats (CPU/RAM)
-  const [systemStats, setSystemStats] = useState({ cpu: 12, mem: 45 });
+  const [systemStats, setSystemStats] = useState({ cpu: 12, mem: 45, temp: 42, diskHealth: 'Good' });
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Uptime: Randomize start if it's 0 (simulating existing runtime), else use config
   const [uptime, setUptime] = useState(() => {
@@ -421,9 +499,40 @@ export default function App() {
      clients: clients.map((c, i) => ({ id: c.id, x: (i + 1) * (100 / (clients.length + 1)), y: 80 }))
   });
 
+  // Sync nodes with clients for Topology Map
+  useEffect(() => {
+      setNodes(prev => {
+          // Keep existing positions for existing clients
+          const existingPositions = new Map(prev.clients.map(n => [n.id, {x: n.x, y: n.y}]));
+          
+          const newClientNodes = clients.map((c, i) => {
+              if (existingPositions.has(c.id)) {
+                  return { id: c.id, ...existingPositions.get(c.id) };
+              }
+              // New client: Assign a random position near the bottom
+              return { 
+                  id: c.id, 
+                  x: Math.random() * 80 + 10, 
+                  y: Math.random() * 40 + 50 
+              };
+          });
+          
+          return { ...prev, clients: newClientNodes };
+      });
+  }, [clients]);
+
   // Hovered Node State for Topology
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [draggingNode, setDraggingNode] = useState(null);
   const mapRef = useRef(null);
+  
+  // New Diagnostics State
+  const [pingHistory, setPingHistory] = useState(Array(60).fill(0));
+  const [dnsQuery, setDnsQuery] = useState('');
+  const [dnsResult, setDnsResult] = useState(null);
+  
+  // Topology Context Menu
+  const [contextMenu, setContextMenu] = useState(null);
 
   // Persistence
   useEffect(() => {
@@ -467,10 +576,35 @@ export default function App() {
       });
 
       // 3. System Load Simulation
-      setSystemStats(prev => ({
-          cpu: Math.max(2, Math.min(100, prev.cpu + (Math.random() - 0.5) * 15)), // CPU spikes more
-          mem: Math.max(20, Math.min(90, prev.mem + (Math.random() - 0.5) * 2))   // Memory is more stable
-      }));
+      setSystemStats(prev => {
+          const newCpu = Math.max(2, Math.min(100, prev.cpu + (Math.random() - 0.5) * 15));
+          
+          // Memory Leak Simulation: Small chance to increment without decrement
+          // Normal fluctuation + occasional leak
+          const memChange = (Math.random() - 0.5) * 2 + (Math.random() > 0.99 ? 0.5 : 0); 
+          const newMem = Math.max(20, Math.min(99, prev.mem + memChange));
+          
+          // Temp follows CPU but lags/smoother
+          // Base temp 40C, +0.5C per CPU %
+          const targetTemp = 40 + (newCpu * 0.5); 
+          const newTemp = prev.temp + (targetTemp - prev.temp) * 0.1;
+
+          // Disk SMART Warning Simulation (Very Rare)
+          let newDisk = prev.diskHealth;
+          if (Math.random() > 0.9999 && prev.diskHealth === 'Good') newDisk = 'Warning';
+
+          // Check Thresholds & Trigger Alerts
+          if (newTemp > 85) addNotification('High CPU Temperature', `CPU is running hot at ${Math.floor(newTemp)}°C`, 'warning');
+          if (newMem > 95) addNotification('Memory Warning', `System memory usage is critical: ${Math.floor(newMem)}%`, 'danger');
+          if (newDisk === 'Warning' && prev.diskHealth === 'Good') addNotification('Disk SMART Alert', 'Primary storage reporting SMART errors', 'danger');
+
+          return {
+              cpu: newCpu,
+              mem: newMem,
+              temp: newTemp,
+              diskHealth: newDisk
+          };
+      });
 
       // 4. Wi-Fi Signal Simulation
       setWifiNeighbors(prev => prev.map(n => ({
@@ -479,10 +613,191 @@ export default function App() {
       })));
       setUserSignalStrength(prev => Math.max(60, Math.min(98, prev + (Math.random() - 0.5) * 5)));
 
+      // 5. Speed Test Logic
+      if (speedTest.status === 'running') {
+        setSpeedTest(prev => {
+           let next = { ...prev };
+           next.progress += 2;
+           
+           if (next.progress < 20) {
+               next.ping = Math.floor(Math.random() * 20) + 5;
+           } else if (next.progress < 60) {
+               next.download = Math.floor(Math.random() * 300) + 100 + Math.floor(Math.random() * 50);
+           } else if (next.progress < 90) {
+               next.upload = Math.floor(Math.random() * 100) + 20 + Math.floor(Math.random() * 30);
+           }
+           
+           if (next.progress >= 100) {
+               next.status = 'complete';
+               next.progress = 100;
+           }
+           return next;
+        });
+      }
+
+      // 6. Packet Sniffer Logic
+      if (sniffer.active) {
+         setSniffer(prev => {
+             const protocols = ['TCP', 'UDP', 'ICMP', 'DNS', 'HTTP', 'TLSv1.3'];
+             const src = `192.168.1.${Math.floor(Math.random() * 254)}`;
+             const dst = `${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+             const newPacket = {
+                 id: Date.now(),
+                 time: new Date().toLocaleTimeString(),
+                 src,
+                 dst,
+                 proto: protocols[Math.floor(Math.random() * protocols.length)],
+                 len: Math.floor(Math.random() * 1500)
+             };
+             // Keep last 50 packets
+             return { ...prev, packets: [newPacket, ...prev.packets].slice(0, 50) };
+         });
+      }
+
+      // 7. Random Log Generation
+      if (Math.random() > 0.99) { // Occasional log (1% chance)
+          const severities = ['Info', 'Warning', 'Error'];
+          const facilities = ['System', 'Auth', 'DHCP', 'Kernel', 'WiFi'];
+          const messages = [
+              'DHCP lease renewed for 192.168.1.105',
+              'Auth failed for user admin from 192.168.1.50',
+              'Kernel panic - recovered',
+              'WiFi client disconnected (Reason: Beacon timeout)',
+              'NTP synchronized with time.google.com'
+          ];
+          const newLog = {
+              id: Date.now(),
+              time: new Date().toISOString(),
+              severity: severities[Math.floor(Math.random() * severities.length)],
+              facility: facilities[Math.floor(Math.random() * facilities.length)],
+              msg: messages[Math.floor(Math.random() * messages.length)]
+          };
+          setLogs(prev => [newLog, ...prev].slice(0, 100));
+      }
+
+      // 8. Intrusion Detection Simulation
+      if (Math.random() > 0.995) { // Reduced to 0.5% chance per tick
+          const threats = [
+              {
+                  title: 'Port Scan Detected',
+                  msg: 'Port scan detected from 192.168.1.105 targeting ports 20-1024.',
+                  severity: 'warning',
+                  action: 'Source IP temporarily blocked'
+              },
+              {
+                  title: 'Suspicious DNS Activity',
+                  msg: 'Possible DNS tunneling detected. High volume of TXT records.',
+                  severity: 'danger',
+                  action: 'Traffic blocked & Logged'
+              },
+              {
+                  title: 'Brute-force Attempt',
+                  msg: 'Multiple failed login attempts detected from external IP 203.0.113.45.',
+                  severity: 'danger',
+                  action: 'IP Blacklisted'
+              }
+          ];
+          
+          const threat = threats[Math.floor(Math.random() * threats.length)];
+          addNotification(threat.title, `${threat.msg} [Action: ${threat.action}]`, threat.severity);
+          
+          // Also add to system logs
+          setLogs(prev => [{
+              id: Date.now(),
+              time: new Date().toISOString(),
+              severity: threat.severity === 'danger' ? 'Error' : 'Warning',
+              facility: 'Security',
+              msg: `${threat.title}: ${threat.msg} Action Taken: ${threat.action}`
+          }, ...prev].slice(0, 100));
+      }
+
+      // 10. Dynamic Client Simulation
+      if (Math.random() > 0.95) { // 5% chance per tick
+          setClients(prev => {
+              const action = Math.random();
+              
+              // Toggle Online/Offline (40% chance)
+              if (action < 0.4) {
+                  if (prev.length === 0) return prev;
+                  const idx = Math.floor(Math.random() * prev.length);
+                  const newClients = [...prev];
+                  // Don't toggle blocked clients or high priority ones too often
+                  if (!newClients[idx].blocked && newClients[idx].priority !== 'high') {
+                      const isGoingOffline = newClients[idx].status === 'online';
+                      newClients[idx] = { 
+                          ...newClients[idx], 
+                          status: isGoingOffline ? 'offline' : 'online',
+                          usage: isGoingOffline ? 0 : Math.floor(Math.random() * 50)
+                      };
+                      
+                      // Log the event
+                      if (Math.random() > 0.5) {
+                           setLogs(logs => [{
+                              id: Date.now(),
+                              time: new Date().toISOString(),
+                              severity: 'Info',
+                              facility: 'WiFi',
+                              msg: `Client ${newClients[idx].name} ${isGoingOffline ? 'disconnected' : 'connected'}`
+                          }, ...logs].slice(0, 100));
+                      }
+                  }
+                  return newClients;
+              }
+              
+              // Add New Client (30% chance) - Max 15 clients
+              if (action < 0.7 && prev.length < 15) {
+                  const types = ['wifi', 'ethernet'];
+                  const deviceNames = ['Guest-Phone', 'Smart-Bulb', 'Laptop-Work', 'Tablet-Kid', 'IoT-Sensor', 'Visitor-PC', 'Smart-Watch', 'Kindle'];
+                  const name = `${deviceNames[Math.floor(Math.random() * deviceNames.length)]}-${Math.floor(Math.random() * 100)}`;
+                  const ip = `192.168.1.${100 + Math.floor(Math.random() * 150)}`;
+                  const mac = Array(6).fill(0).map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':').toUpperCase();
+                  
+                  const newClient = {
+                      id: Date.now(),
+                      name,
+                      ip,
+                      mac,
+                      type: types[Math.floor(Math.random() * types.length)],
+                      status: 'online',
+                      blocked: false,
+                      usage: Math.floor(Math.random() * 100),
+                      priority: 'normal',
+                      downLimit: 0,
+                      upLimit: 0
+                  };
+                  
+                  // Add log for new connection
+                  setLogs(logs => [{
+                      id: Date.now(),
+                      time: new Date().toISOString(),
+                      severity: 'Info',
+                      facility: 'DHCP',
+                      msg: `DHCPACK on ${ip} to ${mac} (${name})`
+                  }, ...logs].slice(0, 100));
+
+                  return [...prev, newClient];
+              }
+              
+              // Remove Offline Client (30% chance) - Keep at least 3
+              if (prev.length > 3) {
+                  const offlineClients = prev.filter(c => c.status === 'offline' && !c.blocked);
+                  if (offlineClients.length > 0) {
+                      const toRemove = offlineClients[Math.floor(Math.random() * offlineClients.length)];
+                      return prev.filter(c => c.id !== toRemove.id);
+                  }
+              }
+              
+              return prev;
+          });
+      }
+
       setUptime(prev => prev + 1);
-    }, 1000);
+      
+      // 9. Ping History
+      setPingHistory(prev => [...prev.slice(1), Math.floor(Math.random() * 20) + 10 + (Math.random() > 0.9 ? 50 : 0)]);
+    }, 1000); 
     return () => clearInterval(interval);
-  }, [rebooting, isLoggedIn]);
+  }, [rebooting, isLoggedIn, speedTest.status, sniffer.active]); 
 
   // Reboot Loop
   useEffect(() => {
@@ -494,6 +809,11 @@ export default function App() {
             setRebootProgress(0);
             setUptime(0); // Reset uptime to 0 after reboot
             setSystemStats({ cpu: 5, mem: 20 }); // Reset stats to low
+            
+            // Logout user after reboot
+            setIsLoggedIn(false);
+            setSession(null);
+            
             showToast('Router rebooted successfully', 'success');
             clearInterval(interval);
             return 0;
@@ -510,33 +830,184 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const addNotification = (title, message, type = 'info') => {
+      const id = Date.now();
+      setNotifications(prev => {
+          // Prevent duplicate spam (debounce 10s)
+          if (prev.length > 0 && prev[0].title === title && (Date.now() - prev[0].timestamp) < 10000) return prev;
+          return [{ id, title, message, type, timestamp: Date.now(), read: false }, ...prev].slice(0, 20);
+      });
+      // Also show toast for immediate visibility
+      showToast(`${title}: ${message}`, type);
+  };
+
+  const addAuditLog = (action, details) => {
+      const user = session?.user || 'System';
+      const newLog = {
+          id: Date.now(),
+          time: new Date().toISOString(),
+          severity: 'Info',
+          facility: 'Audit',
+          msg: `[${action}] [User: ${user}] ${details}`
+      };
+      setLogs(prev => [newLog, ...prev]);
+  };
+
+  // Idle Timer
+  useEffect(() => {
+      if (!isLoggedIn) return;
+      
+      const handleActivity = () => {
+          if (session) {
+              setSession(prev => ({ ...prev, expiry: new Date(Date.now() + 15 * 60 * 1000) }));
+          }
+      };
+      
+      window.addEventListener('mousemove', handleActivity);
+      window.addEventListener('keydown', handleActivity);
+      
+      const interval = setInterval(() => {
+          if (session && new Date() > session.expiry) {
+              handleLogout();
+              showToast('Session expired due to inactivity', 'warning');
+          }
+      }, 1000);
+
+      return () => {
+          window.removeEventListener('mousemove', handleActivity);
+          window.removeEventListener('keydown', handleActivity);
+          clearInterval(interval);
+      };
+  }, [isLoggedIn, session]);
+
   const handleLogin = (e) => {
     e.preventDefault();
-    // Simple mock auth check
-    if (loginForm.username === 'admin' && loginForm.password === config.system.adminPassword) {
+    
+    // Check Lockout
+    if (loginAttempts.lockUntil && new Date() < loginAttempts.lockUntil) {
+       setLoginError(`Account locked. Try again in ${Math.ceil((loginAttempts.lockUntil - new Date())/1000)}s`);
+       return;
+    }
+
+    const user = DEFAULT_USERS.find(u => {
+        const storedPassword = u.username === 'admin' ? config.system.adminPassword : u.password;
+        return u.username === loginForm.username && storedPassword === loginForm.password;
+    });
+
+    if (user) {
+      const token = Math.random().toString(36).substr(2);
+      const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+      setSession({ user: user.username, role: user.role, token, expiry });
       setIsLoggedIn(true);
       setLoginError('');
-      // In a real app, we'd set a token here
+      setLoginAttempts({ count: 0, lockUntil: null });
+      addAuditLog('User Login', `User ${user.username} logged in successfully`);
     } else {
-      setLoginError('Invalid credentials. Default: admin / admin');
+      const newCount = loginAttempts.count + 1;
+      let lockUntil = null;
+      if (newCount >= 3) {
+          lockUntil = new Date(Date.now() + 300 * 1000); // 5 minutes lock
+      }
+      setLoginAttempts({ count: newCount, lockUntil });
+      
+      if (lockUntil) {
+          setLoginError(`Too many attempts. Locked for 5 minutes.`);
+      } else {
+          const attemptsLeft = 3 - newCount;
+          setLoginError(`Invalid credentials. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`);
+      }
     }
   };
 
   const handleLogout = () => {
+    if (session) addAuditLog('User Logout', `User ${session.user} logged out`);
     setIsLoggedIn(false);
     setShowUserMenu(false);
+    setSession(null);
     setLoginForm({ username: '', password: '' });
     showToast('Logged out successfully', 'info');
   };
 
   const updateConfig = (section, key, value) => {
-    setConfig(prev => ({
-      ...prev,
-      [section]: { ...prev[section], [key]: value }
-    }));
+    // CSRF & RBAC Protection
+    if (!session?.token) {
+        showToast('Security Alert: Invalid Session Token (CSRF Blocked)', 'danger');
+        return;
+    }
+    if (session?.role !== ROLES.ADMIN) {
+        showToast('Access Denied: Admin privileges required', 'danger');
+        addAuditLog('Security', `Unauthorized config attempt by ${session?.user}`);
+        return;
+    }
+    setConfig(prev => {
+      const next = { ...prev, [section]: { ...prev[section], [key]: value } };
+      setIsConfigDirty(JSON.stringify(next) !== JSON.stringify(lastAppliedConfig));
+      return next;
+    });
   };
 
-  const handleSave = () => showToast('Configuration saved successfully.', 'success');
+  const validateConfig = (cfg) => {
+      const errors = [];
+      if (cfg.lan.ip === cfg.wan.ip) errors.push("LAN IP cannot match WAN IP");
+      if (cfg.wireless.security !== 'none' && cfg.wireless.password.length < 8) errors.push("Wi-Fi password too weak");
+      return errors;
+  };
+
+  const handleApplyConfig = () => {
+      // CSRF & RBAC Protection
+      if (!session?.token) {
+          showToast('Security Alert: Invalid Session Token (CSRF Blocked)', 'danger');
+          return;
+      }
+      if (session?.role !== ROLES.ADMIN) {
+          showToast('Access Denied: Admin privileges required', 'danger');
+          return;
+      }
+      const errors = validateConfig(config);
+      if (errors.length > 0) {
+          showToast(errors.join(', '), 'danger');
+          return;
+      }
+      
+      setConfigHistory(prev => [lastAppliedConfig, ...prev].slice(0, 10));
+      setLastAppliedConfig(config);
+      setIsConfigDirty(false);
+      setShowRollbackModal(true);
+      setRollbackTimer(15);
+  };
+
+  const revertConfig = () => {
+      setShowRollbackModal(false);
+      setConfigHistory(prev => {
+          const safeConfig = prev[0] || DEFAULT_CONFIG;
+          setConfig(safeConfig);
+          setLastAppliedConfig(safeConfig);
+          return prev;
+      });
+      showToast('Configuration reverted.', 'warning');
+      addAuditLog('Config Revert', 'Configuration reverted automatically or by user');
+  };
+
+  const confirmConfig = () => {
+      setShowRollbackModal(false);
+      showToast('Configuration confirmed.', 'success');
+      addAuditLog('Config Apply', 'Configuration applied and confirmed');
+  };
+
+  // Rollback Timer Effect
+  useEffect(() => {
+      let interval;
+      if (showRollbackModal && rollbackTimer > 0) {
+          interval = setInterval(() => {
+              setRollbackTimer(prev => prev - 1);
+          }, 1000);
+      } else if (showRollbackModal && rollbackTimer === 0) {
+          revertConfig();
+      }
+      return () => clearInterval(interval);
+  }, [showRollbackModal, rollbackTimer]);
+
+  const handleSave = () => handleApplyConfig();
 
   // Parental Control Handlers
   const openAddRuleModal = () => {
@@ -613,23 +1084,48 @@ export default function App() {
   };
 
   const startScenario = (scenario) => {
+      if (!session?.token) return; // CSRF Check
+      if (session?.role !== ROLES.ADMIN) {
+          showToast('Access Denied: Admin privileges required', 'danger');
+          return;
+      }
       const newConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
       scenario.setup(newConfig);
       setConfig(newConfig);
       setActiveScenario(scenario);
       setScenarioSolved(false);
       showToast(`Scenario Started: ${scenario.title}`, 'danger');
+      addAuditLog('Scenario Start', `Started scenario: ${scenario.title}`);
       setActiveTab('dashboard');
   };
 
   const exitScenario = () => {
+      if (!session?.token) return; // CSRF Check
+      if (session?.role !== ROLES.ADMIN) {
+          showToast('Access Denied: Admin privileges required', 'danger');
+          return;
+      }
       setActiveScenario(null);
       setScenarioSolved(false);
       setConfig(DEFAULT_CONFIG);
       showToast('Exited troubleshooting mode. Restored defaults.', 'info');
+      addAuditLog('Scenario Exit', 'Exited troubleshooting mode');
   };
 
   // --- CHART RENDERER (SVG) ---
+  const PingGraph = ({ data }) => {
+     const width = 100;
+     const height = 40;
+     const maxVal = 100; 
+     const points = data.map((d, i) => `${(i / (data.length - 1)) * width},${height - (Math.min(d, maxVal) / maxVal) * height}`).join(' ');
+     return (
+        <svg className="w-full h-24 overflow-visible" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+           <path d={`M 0,${height} ${points} L ${width},${height} Z`} fill="rgba(239, 68, 68, 0.2)" />
+           <polyline points={points} fill="none" stroke="#ef4444" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+        </svg>
+     );
+  };
+
   const TrafficChart = ({ data }) => {
      const width = 100;
      const height = 40;
@@ -662,6 +1158,215 @@ export default function App() {
   };
 
   // --- RENDERERS ---
+
+  const renderLogs = () => (
+      <div className="max-w-6xl mx-auto space-y-6">
+          <Card title="System Log Viewer">
+              <div className="flex gap-2 mb-4">
+                  <Button variant="secondary" className="text-xs h-8">All Levels</Button>
+                  <Button variant="secondary" className="text-xs h-8">Info</Button>
+                  <Button variant="secondary" className="text-xs h-8">Warning</Button>
+                  <Button variant="secondary" className="text-xs h-8">Error</Button>
+                  <div className="flex-1"></div>
+                  <Button variant="secondary" icon={RefreshCw} className="text-xs h-8">Refresh</Button>
+                  <Button variant="secondary" icon={Trash2} className="text-xs h-8">Clear</Button>
+              </div>
+              <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <table className="min-w-full text-sm text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 font-medium">
+                          <tr>
+                              <th className="px-4 py-2">Time</th>
+                              <th className="px-4 py-2">Facility</th>
+                              <th className="px-4 py-2">Severity</th>
+                              <th className="px-4 py-2">Message</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {logs.map(log => (
+                              <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                  <td className="px-4 py-2 font-mono text-xs text-slate-500 whitespace-nowrap">{log.time}</td>
+                                  <td className="px-4 py-2">{log.facility}</td>
+                                  <td className="px-4 py-2">
+                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                          log.severity === 'Error' ? 'bg-red-100 text-red-700' :
+                                          log.severity === 'Warning' ? 'bg-orange-100 text-orange-700' :
+                                          'bg-blue-100 text-blue-700'
+                                      }`}>
+                                          {log.severity}
+                                      </span>
+                                  </td>
+                                  <td className="px-4 py-2 text-slate-700 dark:text-slate-300">{log.msg}</td>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
+          </Card>
+      </div>
+  );
+
+  const renderDiagnostics = () => (
+      <div className="max-w-6xl mx-auto space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Speed Test Card */}
+              <Card title="Internet Speed Test">
+                  <div className="flex flex-col items-center justify-center p-6">
+                      <div className="relative w-48 h-24 mb-6 overflow-hidden">
+                          {/* Gauge Arc Background */}
+                          <div className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-slate-100 dark:border-slate-700 box-border" style={{clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)'}}></div>
+                          {/* Gauge Value Arc */}
+                          <div 
+                              className="absolute top-0 left-0 w-48 h-48 rounded-full border-[12px] border-blue-500 box-border transition-all duration-300 ease-out" 
+                              style={{
+                                  clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)',
+                                  transform: `rotate(${speedTest.progress * 1.8 - 180}deg)`
+                              }}
+                          ></div>
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center">
+                              <span className="text-3xl font-bold text-slate-800 dark:text-white">
+                                  {speedTest.status === 'idle' ? 'GO' : 
+                                   speedTest.progress < 60 ? speedTest.download : speedTest.upload}
+                              </span>
+                              <span className="block text-xs text-slate-400">Mbps</span>
+                          </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-8 w-full mb-6">
+                          <div className="text-center">
+                              <div className="text-xs text-slate-400 uppercase tracking-wide">Ping</div>
+                              <div className="text-xl font-mono text-slate-700 dark:text-slate-200">{speedTest.ping}<span className="text-xs ml-1">ms</span></div>
+                          </div>
+                          <div className="text-center">
+                              <div className="text-xs text-slate-400 uppercase tracking-wide">Download</div>
+                              <div className="text-xl font-mono text-green-500">{speedTest.download}<span className="text-xs ml-1">Mbps</span></div>
+                          </div>
+                          <div className="text-center">
+                              <div className="text-xs text-slate-400 uppercase tracking-wide">Upload</div>
+                              <div className="text-xl font-mono text-blue-500">{speedTest.upload}<span className="text-xs ml-1">Mbps</span></div>
+                          </div>
+                      </div>
+
+                      <Button 
+                          onClick={() => setSpeedTest({ status: 'running', progress: 0, ping: 0, download: 0, upload: 0 })}
+                          disabled={speedTest.status === 'running'}
+                          className="w-full justify-center"
+                          icon={Gauge}
+                      >
+                          {speedTest.status === 'running' ? 'Testing...' : 'Start Test'}
+                      </Button>
+                  </div>
+              </Card>
+
+              {/* Live Latency Graph */}
+              <Card title="Live Latency (Ping)">
+                  <div className="p-4">
+                      <div className="flex justify-between items-end mb-2">
+                          <div className="text-3xl font-bold text-slate-800 dark:text-white">
+                              {pingHistory[pingHistory.length-1]} <span className="text-sm font-normal text-slate-500">ms</span>
+                          </div>
+                          <div className="text-xs text-slate-400">Target: 8.8.8.8</div>
+                      </div>
+                      <PingGraph data={pingHistory} />
+                  </div>
+              </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* DNS Lookup Tool */}
+              <Card title="DNS Lookup Tool">
+                  <div className="flex gap-2 mb-4">
+                      <input 
+                          className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 dark:text-white"
+                          placeholder="Enter domain (e.g. google.com)"
+                          value={dnsQuery}
+                          onChange={(e) => setDnsQuery(e.target.value)}
+                      />
+                      <Button onClick={() => {
+                          if(!dnsQuery) return;
+                          setDnsResult({ loading: true });
+                          setTimeout(() => {
+                              setDnsResult({
+                                  domain: dnsQuery,
+                                  records: [
+                                      { type: 'A', value: '142.250.190.46', ttl: 300 },
+                                      { type: 'AAAA', value: '2607:f8b0:4009:804::200e', ttl: 300 },
+                                      { type: 'MX', value: 'smtp.google.com', ttl: 3600 }
+                                  ],
+                                  loading: false
+                              });
+                          }, 1000);
+                      }}>Lookup</Button>
+                  </div>
+                  {dnsResult && (
+                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700 min-h-[150px]">
+                          {dnsResult.loading ? (
+                              <div className="flex items-center justify-center h-full text-slate-500">Querying DNS servers...</div>
+                          ) : (
+                              <div className="space-y-2 font-mono text-sm">
+                                  <div className="text-slate-500 border-b pb-1 mb-2">Results for {dnsResult.domain}</div>
+                                  {dnsResult.records.map((rec, i) => (
+                                      <div key={i} className="flex gap-4">
+                                          <span className="w-12 font-bold text-blue-600">{rec.type}</span>
+                                          <span className="flex-1 text-slate-700 dark:text-slate-300">{rec.value}</span>
+                                          <span className="text-slate-400">{rec.ttl}s</span>
+                                      </div>
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+                  )}
+              </Card>
+
+              {/* Packet Sniffer Card */}
+              <Card title="Packet Capture (Sniffer)">
+                   <div className="flex justify-between items-center mb-4">
+                       <div className="flex items-center gap-2">
+                           <div className={`w-3 h-3 rounded-full ${sniffer.active ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                           <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{sniffer.active ? 'Capturing on eth0...' : 'Idle'}</span>
+                       </div>
+                       <Button 
+                          variant={sniffer.active ? "danger" : "success"} 
+                          onClick={() => setSniffer(prev => ({...prev, active: !prev.active}))}
+                          icon={sniffer.active ? StopCircle : Play}
+                          className="h-8 text-xs"
+                       >
+                           {sniffer.active ? 'Stop Capture' : 'Start Capture'}
+                       </Button>
+                   </div>
+                   
+                   <div className="h-64 overflow-y-auto bg-black rounded-lg border border-slate-700 font-mono text-xs text-green-400 p-2">
+                       <table className="w-full text-left">
+                           <thead>
+                               <tr className="text-slate-500 border-b border-slate-800">
+                                   <th className="pb-1 w-20">Time</th>
+                                   <th className="pb-1 w-28">Source</th>
+                                   <th className="pb-1 w-28">Dest</th>
+                                   <th className="pb-1 w-16">Proto</th>
+                                   <th className="pb-1">Len</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {sniffer.packets.length === 0 ? (
+                                   <tr><td colSpan="5" className="text-slate-600 text-center py-4">No packets captured</td></tr>
+                               ) : (
+                                   sniffer.packets.map(p => (
+                                       <tr key={p.id} className="hover:bg-slate-900">
+                                           <td className="py-0.5 opacity-70">{p.time}</td>
+                                           <td className="py-0.5 text-blue-400">{p.src}</td>
+                                           <td className="py-0.5 text-orange-400">{p.dst}</td>
+                                           <td className="py-0.5">{p.proto}</td>
+                                           <td className="py-0.5 opacity-70">{p.len}</td>
+                                       </tr>
+                                   ))
+                               )}
+                           </tbody>
+                       </table>
+                       {/* Auto scroll anchor if needed */}
+                   </div>
+              </Card>
+          </div>
+      </div>
+  );
 
   const renderDashboard = () => {
     // Calculate client stats for dashboard
@@ -756,7 +1461,34 @@ export default function App() {
           </div>
 
           {/* Second Row: LAN & Wireless Summary (NEW) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* System Health Card (NEW) */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
+                      <Cpu size={18} className="text-rose-500"/> System Health
+                  </h4>
+                  <div className="space-y-4">
+                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
+                          <span className="text-sm text-slate-600 dark:text-slate-300">CPU Temp</span>
+                          <span className={`font-mono text-sm font-bold ${systemStats.temp > 80 ? 'text-red-500' : 'text-green-500'}`}>
+                              {Math.floor(systemStats.temp)}°C
+                          </span>
+                      </div>
+                      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
+                          <span className="text-sm text-slate-600 dark:text-slate-300">Memory</span>
+                          <span className={`font-mono text-sm font-bold ${systemStats.mem > 90 ? 'text-red-500' : 'text-blue-500'}`}>
+                              {Math.floor(systemStats.mem)}%
+                          </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                          <span className="text-sm text-slate-600 dark:text-slate-300">Disk SMART</span>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${systemStats.diskHealth === 'Good' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                              {systemStats.diskHealth.toUpperCase()}
+                          </span>
+                      </div>
+                  </div>
+              </div>
+
               {/* LAN Status Card */}
               <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
                   <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
@@ -1014,12 +1746,38 @@ export default function App() {
       </Card>
       
       <div className="flex justify-end">
-        <Button onClick={handleSave} icon={Save}>Save Network Settings</Button>
+        <Button onClick={handleSave} icon={Save} disabled={session?.role !== ROLES.ADMIN}>Save Network Settings</Button>
       </div>
     </div>
   );
 
   const renderWireless = () => {
+    // Channel Optimization Logic
+    const recommendChannel = () => {
+        const scores = {};
+        for (let i = 1; i <= 11; i++) scores[i] = 0;
+        
+        wifiNeighbors.forEach(n => {
+            // Add "interference score" to the channel and adjacent ones
+            if (scores[n.channel] !== undefined) scores[n.channel] += n.strength;
+            if (scores[n.channel - 1] !== undefined) scores[n.channel - 1] += (n.strength * 0.5);
+            if (scores[n.channel + 1] !== undefined) scores[n.channel + 1] += (n.strength * 0.5);
+        });
+        
+        // Find channel with lowest score
+        let bestChannel = 1;
+        let minScore = Infinity;
+        for (let i = 1; i <= 11; i++) {
+            if (scores[i] < minScore) {
+                minScore = scores[i];
+                bestChannel = i;
+            }
+        }
+        return { channel: bestChannel, score: minScore };
+    };
+    
+    const recommendation = recommendChannel();
+
     const getCurvePath = (channel, strength) => {
        const height = 200 - (strength * 1.8); 
        const startX = (channel * 65) - 60;
@@ -1091,13 +1849,45 @@ export default function App() {
                  )}
              </svg>
           </div>
-          <p className="text-xs text-slate-500 mt-2">
-             Real-time analysis. 
-             {wifiNeighbors.some(n => n.channel === (config.wireless.channel === 'auto' ? 6 : parseInt(config.wireless.channel))) 
-               ? <span className="text-red-500 font-medium ml-1 flex items-center gap-1 inline-flex"><AlertTriangle size={12}/> High interference detected on current channel!</span> 
-               : <span className="text-green-600 font-medium ml-1 flex items-center gap-1 inline-flex"><CheckCircle size={12}/> Current channel looks clear.</span>
-             }
-          </p>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-200 dark:border-slate-700">
+                <div className="text-xs text-slate-500 uppercase font-bold mb-1">Current Status</div>
+                <div className="flex items-center gap-2">
+                    {wifiNeighbors.some(n => n.channel === (config.wireless.channel === 'auto' ? 6 : parseInt(config.wireless.channel))) 
+                       ? <AlertTriangle size={16} className="text-red-500"/> 
+                       : <CheckCircle size={16} className="text-green-500"/>
+                    }
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {wifiNeighbors.some(n => n.channel === (config.wireless.channel === 'auto' ? 6 : parseInt(config.wireless.channel))) 
+                           ? "High Interference Detected" 
+                           : "Channel Looks Clear"
+                        }
+                    </span>
+                </div>
+             </div>
+             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800">
+                <div className="text-xs text-blue-500 uppercase font-bold mb-1">AI Recommendation</div>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Zap size={16} className="text-blue-600 dark:text-blue-400"/>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Switch to Channel {recommendation.channel}
+                        </span>
+                    </div>
+                    <Button 
+                        variant="primary" 
+                        className="h-6 text-xs px-2" 
+                        onClick={() => {
+                            updateConfig('wireless', 'channel', recommendation.channel.toString());
+                            showToast(`Switched to optimized channel ${recommendation.channel}`, 'success');
+                        }}
+                        disabled={session?.role !== ROLES.ADMIN || config.wireless.channel === recommendation.channel.toString()}
+                    >
+                        Apply
+                    </Button>
+                </div>
+             </div>
+          </div>
        </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1127,7 +1917,7 @@ export default function App() {
           </Card>
       </div>
 
-      <div className="flex justify-end"><Button onClick={handleSave} icon={Save}>Save Wireless Settings</Button></div>
+      <div className="flex justify-end"><Button onClick={handleSave} icon={Save} disabled={session?.role !== ROLES.ADMIN}>Save Wireless Settings</Button></div>
     </div>
   );
   };
@@ -1239,11 +2029,14 @@ export default function App() {
                   <td className="px-6 py-4 text-center text-sm font-medium">
                     <button 
                       onClick={() => {
+                        if (session?.role === ROLES.VIEWER) return;
                         const newClients = clients.map(c => c.id === client.id ? {...c, blocked: !c.blocked} : c);
                         setClients(newClients);
                         showToast(`${client.name} ${!client.blocked ? 'blocked' : 'unblocked'}`, !client.blocked ? 'danger' : 'success');
                       }}
-                      className={`${client.blocked ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'}`}
+                      disabled={session?.role === ROLES.VIEWER}
+                      title={session?.role === ROLES.VIEWER ? "Viewers cannot block devices" : ""}
+                      className={`${client.blocked ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'} ${session?.role === ROLES.VIEWER ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {client.blocked ? 'Unblock' : 'Block'}
                     </button>
@@ -1263,6 +2056,7 @@ export default function App() {
                 icon={Plus} 
                 className="h-8 text-xs"
                 onClick={openAddRuleModal}
+                disabled={session?.role === ROLES.VIEWER}
             >
                 Add Rule
             </Button>
@@ -1278,20 +2072,23 @@ export default function App() {
                              </div>
                              <div className="flex gap-2">
                                 <button 
-                                    className="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 dark:hover:bg-slate-700 rounded"
-                                    onClick={() => openEditRuleModal(rule)}
+                                    className={`text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 dark:hover:bg-slate-700 rounded ${session?.role === ROLES.VIEWER ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={() => session?.role !== ROLES.VIEWER && openEditRuleModal(rule)}
                                     title="Edit Rule"
+                                    disabled={session?.role === ROLES.VIEWER}
                                 >
                                     <Edit2 className="h-4 w-4"/>
                                 </button>
                                 <button 
-                                    className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 dark:hover:bg-slate-700 rounded"
+                                    className={`text-red-500 hover:text-red-700 p-1 hover:bg-red-50 dark:hover:bg-slate-700 rounded ${session?.role === ROLES.VIEWER ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     onClick={() => {
+                                        if (session?.role === ROLES.VIEWER) return;
                                         const updatedRules = config.parental.rules.filter(r => r.id !== rule.id);
                                         updateConfig('parental', 'rules', updatedRules);
                                         showToast('Rule deleted', 'info');
                                     }}
                                     title="Delete Rule"
+                                    disabled={session?.role === ROLES.VIEWER}
                                 >
                                     <Trash2 className="h-4 w-4"/>
                                 </button>
@@ -1490,20 +2287,203 @@ key client.key`}</pre>
                         onClick={() => deleteSecurityRule(rule.id)}
                         className="text-slate-400 hover:text-red-500 transition-colors p-1"
                         title="Delete Rule"
+                        disabled={session?.role !== ROLES.ADMIN}
                       >
                         <Trash2 size={14} />
                       </button>
                   </div>
                </div>
              ))}
-             <div className="mt-4">
-                <Button variant="secondary" onClick={openAddSecurityRuleModal} icon={Plus}>Add New Rule</Button>
+             <div className="mt-4 flex gap-2">
+                <Button variant="secondary" onClick={openAddSecurityRuleModal} icon={Plus} disabled={session?.role !== ROLES.ADMIN}>Add New Rule</Button>
+                <Button 
+                    variant="danger" 
+                    icon={AlertTriangle} 
+                    onClick={() => {
+                        const threats = [
+                            { title: 'Port Scan Detected', msg: 'Port scan detected from 192.168.1.105 targeting ports 20-1024.', severity: 'warning', action: 'Source IP temporarily blocked' },
+                            { title: 'Suspicious DNS Activity', msg: 'Possible DNS tunneling detected. High volume of TXT records.', severity: 'danger', action: 'Traffic blocked & Logged' },
+                            { title: 'Brute-force Attempt', msg: 'Multiple failed login attempts detected from external IP 203.0.113.45.', severity: 'danger', action: 'IP Blacklisted' }
+                        ];
+                        const threat = threats[Math.floor(Math.random() * threats.length)];
+                        addNotification(threat.title, `${threat.msg} [Action: ${threat.action}]`, threat.severity);
+                        setLogs(prev => [{
+                            id: Date.now(),
+                            time: new Date().toISOString(),
+                            severity: threat.severity === 'danger' ? 'Error' : 'Warning',
+                            facility: 'Security',
+                            msg: `${threat.title}: ${threat.msg} Action Taken: ${threat.action}`
+                        }, ...prev].slice(0, 100));
+                    }}
+                >
+                    Simulate Attack
+                </Button>
              </div>
            </div>
         </Card>
-        <div className="flex justify-end"><Button onClick={handleSave} icon={Save}>Apply Security Settings</Button></div>
+        <div className="flex justify-end"><Button onClick={handleSave} icon={Save} disabled={session?.role !== ROLES.ADMIN}>Apply Security Settings</Button></div>
      </div>
   );
+
+  const renderQoS = () => {
+      
+      return (
+        <div className="space-y-6 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* QoS Configuration */}
+                <Card title="Quality of Service (QoS) Engine">
+                    <Toggle 
+                        label="Enable Smart QoS" 
+                        subLabel="Prioritize traffic based on application and device" 
+                        enabled={config.qos.enabled} 
+                        onChange={(v) => updateConfig('qos', 'enabled', v)} 
+                    />
+                    
+                    {config.qos.enabled && (
+                        <div className="mt-6 space-y-6 animate-fade-in">
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 uppercase tracking-wider">Application Priority</h4>
+                                <div className="space-y-2">
+                                    {config.qos.priorities.map((app, idx) => (
+                                        <div key={app.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-md ${
+                                                    app.priority === 'high' ? 'bg-red-100 text-red-600' : 
+                                                    app.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' : 
+                                                    app.priority === 'low' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                    {app.id === 'gaming' ? <Zap size={16}/> : app.id === 'zoom' ? <Video size={16}/> : app.id === 'streaming' ? <Film size={16}/> : <Globe size={16}/>}
+                                                </div>
+                                                <span className="font-medium text-slate-700 dark:text-slate-200">{app.name}</span>
+                                            </div>
+                                            <select 
+                                                value={app.priority}
+                                                onChange={(e) => {
+                                                    const newPriorities = [...config.qos.priorities];
+                                                    newPriorities[idx].priority = e.target.value;
+                                                    updateConfig('qos', 'priorities', newPriorities);
+                                                }}
+                                                className="text-xs font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="high">High</option>
+                                                <option value="medium">Medium</option>
+                                                <option value="normal">Normal</option>
+                                                <option value="low">Low</option>
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 uppercase tracking-wider">Device Bandwidth Limits</h4>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full text-sm text-left">
+                                        <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900/50">
+                                            <tr>
+                                                <th className="px-4 py-2">Device</th>
+                                                <th className="px-4 py-2">Download Cap</th>
+                                                <th className="px-4 py-2">Upload Cap</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {clients.map(client => (
+                                                <tr key={client.id}>
+                                                    <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300">{client.name}</td>
+                                                    <td className="px-4 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <input 
+                                                                type="number" 
+                                                                className="w-16 px-2 py-1 text-xs border rounded dark:bg-slate-800 dark:border-slate-600" 
+                                                                placeholder="Unl"
+                                                                value={client.downLimit || ''}
+                                                                onChange={(e) => {
+                                                                    const val = parseInt(e.target.value) || 0;
+                                                                    setClients(clients.map(c => c.id === client.id ? {...c, downLimit: val} : c));
+                                                                }}
+                                                            />
+                                                            <span className="text-xs text-slate-400">Mbps</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <input 
+                                                                type="number" 
+                                                                className="w-16 px-2 py-1 text-xs border rounded dark:bg-slate-800 dark:border-slate-600" 
+                                                                placeholder="Unl"
+                                                                value={client.upLimit || ''}
+                                                                onChange={(e) => {
+                                                                    const val = parseInt(e.target.value) || 0;
+                                                                    setClients(clients.map(c => c.id === client.id ? {...c, upLimit: val} : c));
+                                                                }}
+                                                            />
+                                                            <span className="text-xs text-slate-400">Mbps</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </Card>
+
+                {/* Historical Analytics */}
+                <Card title="Traffic Analytics">
+                    <div className="flex gap-2 mb-6">
+                        {['24h', '7d', '30d'].map(p => (
+                            <button 
+                                key={p}
+                                onClick={() => setAnalyticsPeriod(p)}
+                                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                                    analyticsPeriod === p 
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
+                                    : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
+                            >
+                                {p === '24h' ? 'Last 24 Hours' : p === '7d' ? 'Last 7 Days' : 'Last 30 Days'}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="h-64 w-full mb-4">
+                        <TrafficChart data={analyticsData} />
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-400 border-t border-slate-200 dark:border-slate-700 pt-2">
+                        <span>{analyticsData[0].label}</span>
+                        <span>{analyticsData[Math.floor(analyticsData.length / 2)].label}</span>
+                        <span>{analyticsData[analyticsData.length - 1].label}</span>
+                    </div>
+
+                    <div className="mt-8">
+                        <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 uppercase tracking-wider">Top Clients (Total Usage)</h4>
+                        <div className="space-y-3">
+                            {clientUsage.map((client, i) => (
+                                <div key={client.id} className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="font-bold text-slate-400 text-sm">#{i+1}</div>
+                                        <div>
+                                            <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{client.name}</div>
+                                            <div className="text-xs text-slate-500">{client.mac}</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{client.usage} GB</div>
+                                        <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full mt-1 ml-auto">
+                                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${100 - (i * 20)}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </div>
+      );
+  };
 
   const renderTools = () => (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -1531,12 +2511,12 @@ key client.key`}</pre>
                    const a = document.createElement('a'); a.href = url; a.download = `backup-${config.system.hostname}.json`; a.click();
                    showToast('Configuration downloaded', 'success');
                }}>Backup Configuration</Button>
-               <Button variant="secondary" className="w-full justify-center" icon={Upload} onClick={() => showToast('Simulated: Upload Prompt', 'info')}>Restore Configuration</Button>
+               <Button variant="secondary" className="w-full justify-center" icon={Upload} onClick={() => showToast('Simulated: Upload Prompt', 'info')} disabled={session?.role !== ROLES.ADMIN}>Restore Configuration</Button>
             </div>
             <div className="space-y-4">
                <h4 className="font-medium text-slate-800 dark:text-slate-200">Operations</h4>
-               <Button variant="danger" className="w-full justify-center" icon={RefreshCw} onClick={() => setRebooting(true)}>Reboot Router</Button>
-               <Button variant="danger" className="w-full justify-center" icon={AlertTriangle} onClick={() => {setConfig(DEFAULT_CONFIG); showToast('Reset to Factory Defaults', 'success'); setRebooting(true);}}>Factory Reset</Button>
+               <Button variant="danger" className="w-full justify-center" icon={RefreshCw} onClick={() => setRebooting(true)} disabled={session?.role !== ROLES.ADMIN}>Reboot Router</Button>
+               <Button variant="danger" className="w-full justify-center" icon={AlertTriangle} onClick={() => {setConfig(DEFAULT_CONFIG); showToast('Reset to Factory Defaults', 'success'); setRebooting(true);}} disabled={session?.role !== ROLES.ADMIN}>Factory Reset</Button>
             </div>
          </div>
       </Card>
@@ -1567,7 +2547,21 @@ key client.key`}</pre>
                  onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})} 
                />
                <div className="flex justify-end pt-2">
-                  <Button onClick={() => {
+                  <Button disabled={session?.role !== ROLES.ADMIN} onClick={() => {
+                    if (passwordForm.current !== config.system.adminPassword) {
+                      showToast('Incorrect current password', 'danger');
+                      return;
+                    }
+                    if (passwordForm.new !== passwordForm.confirm) {
+                      showToast('New passwords do not match', 'danger');
+                      return;
+                    }
+                    if (passwordForm.new.length < 5) {
+                      showToast('Password must be at least 5 characters', 'danger');
+                      return;
+                    }
+                    
+                    updateConfig('system', 'adminPassword', passwordForm.new);
                     setPasswordForm({ current: '', new: '', confirm: '' });
                     showToast('Password updated successfully', 'success');
                   }}>Update Password</Button>
@@ -1581,6 +2575,7 @@ key client.key`}</pre>
           config={config} 
           updateConfig={updateConfig} 
           setRebooting={setRebooting}
+          role={session?.role}
           onFactoryReset={() => {
              setConfig(DEFAULT_CONFIG);
              showToast('Reset to Factory Defaults', 'success');
@@ -1610,6 +2605,47 @@ key client.key`}</pre>
         });
     };
 
+    const handleContextMenu = (e, type, id) => {
+        e.preventDefault();
+        const rect = mapRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        setContextMenu({ x, y, type, id });
+    };
+
+    const autoLayout = () => {
+        const newNodes = { ...nodes };
+        // Router in center
+        newNodes.router = { x: 50, y: 50 };
+        newNodes.internet = { x: 50, y: 15 };
+        
+        // Mesh Topology Layout: Distribute clients in a circle around the router
+        const radius = 35; // Distance from center
+        const clientCount = clients.length;
+        
+        clients.forEach((c, i) => {
+            const node = newNodes.clients.find(n => n.id === c.id);
+            if (node) {
+                // Distribute evenly in a circle, starting from angle that avoids the top (Internet)
+                // Internet is at -90deg (top). We start at 30deg.
+                const angle = (i / clientCount) * 2 * Math.PI + 0.5; 
+                
+                // Add some randomness for "Mesh" feel
+                const randomOffset = (Math.random() - 0.5) * 5;
+                
+                node.x = 50 + (radius + randomOffset) * Math.cos(angle);
+                node.y = 50 + (radius + randomOffset) * Math.sin(angle);
+                
+                // Clamp to bounds (5-95%)
+                node.x = Math.max(5, Math.min(95, node.x));
+                node.y = Math.max(5, Math.min(95, node.y));
+            }
+        });
+        
+        setNodes(newNodes);
+        showToast('Mesh Topology Layout applied', 'success');
+    };
+
     const renderNodeDetail = () => {
         if (!hoveredNode) return null;
         
@@ -1631,6 +2667,7 @@ key client.key`}</pre>
             position = nodes.router;
         } else if (hoveredNode.type === 'clients') {
             detailData = clients.find(c => c.id === hoveredNode.id);
+            if (!detailData) return null;
             title = detailData.name;
             icon = detailData.type === 'wifi' ? <Smartphone size={16} className="text-blue-500" /> : <Laptop size={16} className="text-emerald-500" />;
             // Find client position
@@ -1688,18 +2725,72 @@ key client.key`}</pre>
     };
 
     return (
-      <div className="max-w-6xl mx-auto h-full flex flex-col">
-        <Card title="Interactive Topology Map" className="flex-1 min-h-[600px] relative overflow-hidden bg-slate-100 dark:bg-slate-900/50" noPadding>
+      <div className="max-w-6xl mx-auto h-full flex flex-col" onClick={() => setContextMenu(null)}>
+        <Card 
+            title="Interactive Topology Map" 
+            className="flex-1 min-h-[600px] relative overflow-hidden bg-slate-100 dark:bg-slate-900/50" 
+            noPadding
+        >
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+              <Button variant="secondary" className="h-8 text-xs shadow-sm bg-white/90 dark:bg-slate-800/90 backdrop-blur" icon={Layers} onClick={autoLayout}>Auto Layout</Button>
+          </div>
+
           <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 z-10 text-xs space-y-2">
              <div className="font-bold mb-1 text-slate-700 dark:text-slate-300">Legend</div>
-             <div className="flex items-center gap-2"><div className="w-8 h-1 bg-emerald-500 rounded-full"></div><span className="text-slate-500">Ethernet</span></div>
-             <div className="flex items-center gap-2"><div className="w-8 h-1 border-t-2 border-dashed border-blue-400"></div><span className="text-slate-500">Wi-Fi</span></div>
-             <div className="mt-2 text-[10px] text-slate-400 border-t border-slate-100 dark:border-slate-700 pt-2">Hover nodes for details</div>
+             <div className="flex items-center gap-2"><div className="w-8 h-1 bg-emerald-500 rounded-full"></div><span className="text-slate-500">Ethernet (1Gbps)</span></div>
+             <div className="flex items-center gap-2"><div className="w-8 h-1 border-t-2 border-dashed border-blue-400"></div><span className="text-slate-500">Wi-Fi (866Mbps)</span></div>
+             <div className="flex items-center gap-2"><div className="w-8 h-1 bg-orange-500 rounded-full"></div><span className="text-slate-500">High Traffic</span></div>
+             <div className="flex items-center gap-2"><div className="w-8 h-1 bg-red-500 rounded-full"></div><span className="text-slate-500">Congested</span></div>
+             <div className="mt-2 text-[10px] text-slate-400 border-t border-slate-100 dark:border-slate-700 pt-2">Right-click nodes for actions</div>
           </div>
           
           <div className="relative w-full h-full min-h-[600px]" ref={mapRef}>
              {/* Render Detail Popover */}
              {renderNodeDetail()}
+
+             {/* Context Menu */}
+             {contextMenu && (
+                 <div 
+                    className="absolute z-50 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 w-48 animate-fade-in"
+                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                 >
+                     {contextMenu.type === 'clients' ? (
+                         <>
+                             <button className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" onClick={() => {
+                                 const client = clients.find(c => c.id === contextMenu.id);
+                                 if (!client) return;
+                                 const newClients = clients.map(c => c.id === contextMenu.id ? {...c, blocked: !c.blocked} : c);
+                                 setClients(newClients);
+                                 showToast(`${client.name} ${!client.blocked ? 'blocked' : 'unblocked'}`, !client.blocked ? 'danger' : 'success');
+                                 setContextMenu(null);
+                             }}>
+                                 <Shield size={14}/> Block Device
+                             </button>
+                             <button className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" onClick={() => {
+                                 const client = clients.find(c => c.id === contextMenu.id);
+                                 if (!client) return;
+                                 const newPriority = client.priority === 'high' ? 'normal' : 'high';
+                                 const newClients = clients.map(c => c.id === contextMenu.id ? {...c, priority: newPriority} : c);
+                                 setClients(newClients);
+                                 showToast(`Device priority set to ${newPriority}`, 'success');
+                                 setContextMenu(null);
+                             }}>
+                                 <Zap size={14} className={clients.find(c => c.id === contextMenu.id)?.priority === 'high' ? 'text-yellow-500' : ''}/> 
+                                 {clients.find(c => c.id === contextMenu.id)?.priority === 'high' ? 'Remove Priority' : 'Prioritize Traffic'}
+                             </button>
+                             <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+                             <button className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" onClick={() => {
+                                 setActiveTab('clients');
+                                 setContextMenu(null);
+                             }}>
+                                 <Settings size={14}/> View Details
+                             </button>
+                         </>
+                     ) : (
+                         <div className="px-4 py-2 text-xs text-slate-500">No actions available</div>
+                     )}
+                 </div>
+             )}
 
              {/* SVG Layer with ViewBox for Percentage Coordinates */}
              <svg className="absolute inset-0 w-full h-full z-0" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -1722,24 +2813,58 @@ key client.key`}</pre>
                 {/* Router to Clients Connections */}
                 {nodes.clients.map((clientNode) => {
                     const client = clients.find(c => c.id === clientNode.id);
+                    if (!client) return null;
                     const isWifi = client.type === 'wifi';
-                    const strokeColor = isWifi ? '#60a5fa' : '#10b981';
+                    
+                    // Logical Link Metrics
+                    const linkSpeed = isWifi ? '866 Mbps' : '1 Gbps';
+                    const vlan = isWifi ? 'VLAN 20' : 'VLAN 10';
+                    const packetLoss = client.status === 'online' ? (Math.random() * 0.5).toFixed(1) + '%' : '100%';
+                    
+                    // Congestion Logic
+                    const usage = client.usage || 0;
+                    let linkColor = isWifi ? '#60a5fa' : '#10b981'; // Default Blue/Green
+                    let linkStatus = 'Normal';
+                    
+                    if (client.blocked) {
+                        linkColor = '#94a3b8'; // Gray
+                        linkStatus = 'Blocked';
+                    } else if (usage > 80) {
+                        linkColor = '#ef4444'; // Red (Congested)
+                        linkStatus = 'Congested';
+                    } else if (usage > 50) {
+                        linkColor = '#f59e0b'; // Orange (Busy)
+                        linkStatus = 'Busy';
+                    }
+
+                    const pathId = `link-path-${clientNode.id}`;
                     
                     return (
                         <g key={`link-${clientNode.id}`}>
                             <path 
+                                id={pathId}
                                 d={`M ${nodes.router.x} ${nodes.router.y} C ${nodes.router.x} ${(nodes.router.y + clientNode.y)/2}, ${clientNode.x} ${(nodes.router.y + clientNode.y)/2}, ${clientNode.x} ${clientNode.y}`}
                                 fill="none"
-                                stroke={strokeColor}
-                                strokeWidth="0.4"
+                                stroke={linkColor}
+                                strokeWidth={usage > 50 ? "0.8" : "0.4"}
                                 strokeDasharray={isWifi ? "1,1" : ""} 
                                 className="opacity-60 transition-all duration-300"
                             />
+                            
+                            {/* Logical Link Info Label */}
+                            {client.status === 'online' && !client.blocked && (
+                                <text fontSize="2" fill={linkColor} dy="-1">
+                                    <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
+                                        {linkSpeed} • {vlan} • Loss: {packetLoss}
+                                    </textPath>
+                                </text>
+                            )}
+
                             {/* Packet Animation */}
                             {client.status === 'online' && !client.blocked && (
-                                <circle r="0.6" fill={strokeColor}>
+                                <circle r={usage > 50 ? "0.8" : "0.6"} fill={linkColor}>
                                     <animateMotion 
-                                        dur={`${1.5 + Math.random()}s`} 
+                                        dur={`${Math.max(0.5, 2 - (usage / 100))}s`} // Faster if higher usage
                                         repeatCount="indefinite" 
                                         path={`M ${nodes.router.x} ${nodes.router.y} C ${nodes.router.x} ${(nodes.router.y + clientNode.y)/2}, ${clientNode.x} ${(nodes.router.y + clientNode.y)/2}, ${clientNode.x} ${clientNode.y}`} 
                                     />
@@ -1756,6 +2881,7 @@ key client.key`}</pre>
                 style={{ left: `${nodes.internet.x}%`, top: `${nodes.internet.y}%` }} 
                 onMouseEnter={() => setHoveredNode({ type: 'internet' })}
                 onMouseLeave={() => setHoveredNode(null)}
+                onContextMenu={(e) => handleContextMenu(e, 'internet')}
              >
                 <div className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 group-hover:border-blue-500 transition-colors">
                     <Cloud className="w-8 h-8 text-blue-500" />
@@ -1772,6 +2898,7 @@ key client.key`}</pre>
                 style={{ left: `${nodes.router.x}%`, top: `${nodes.router.y}%` }} 
                 onMouseEnter={() => setHoveredNode({ type: 'router' })}
                 onMouseLeave={() => setHoveredNode(null)}
+                onContextMenu={(e) => handleContextMenu(e, 'router')}
              >
                 <div className="relative p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 group-hover:border-indigo-500 transition-colors">
                    <div className="absolute -top-1 left-4 w-1 h-3 bg-slate-300 dark:bg-slate-600 rounded-t"></div>
@@ -1790,6 +2917,7 @@ key client.key`}</pre>
              {/* NODES: Clients */}
              {nodes.clients.map((node) => {
                  const client = clients.find(c => c.id === node.id);
+                 if (!client) return null;
                  return (
                      <div 
                         key={node.id} 
@@ -1797,18 +2925,35 @@ key client.key`}</pre>
                         style={{ left: `${node.x}%`, top: `${node.y}%` }} 
                         onMouseEnter={() => setHoveredNode({ type: 'clients', id: node.id })}
                         onMouseLeave={() => setHoveredNode(null)}
+                        onContextMenu={(e) => handleContextMenu(e, 'clients', node.id)}
                      >
-                        <div className={`p-2.5 rounded-xl shadow-md border transition-all duration-300 ${
+                        <div className={`relative p-2.5 rounded-xl shadow-md border transition-all duration-300 ${
                             client.blocked 
                                 ? 'bg-red-50 border-red-200 grayscale' 
-                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:border-blue-400 group-hover:-translate-y-1 group-hover:shadow-lg'
+                                : client.priority === 'high'
+                                    ? 'bg-white dark:bg-slate-800 border-yellow-400 ring-2 ring-yellow-400/20 shadow-yellow-200'
+                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:border-blue-400 group-hover:-translate-y-1 group-hover:shadow-lg'
                         }`}>
+                           {/* Priority Star */}
+                           {client.priority === 'high' && !client.blocked && (
+                               <div className="absolute -top-1 -right-1 bg-yellow-400 text-white rounded-full p-0.5 shadow-sm">
+                                   <Zap size={8} fill="currentColor" />
+                               </div>
+                           )}
+
                            {client.type === 'wifi' ? (
                                <Smartphone className={`w-6 h-6 ${client.status === 'online' ? 'text-blue-500' : 'text-slate-400'}`} />
                            ) : (
                                <Laptop className={`w-6 h-6 ${client.status === 'online' ? 'text-emerald-500' : 'text-slate-400'}`} />
                            )}
                         </div>
+                        
+                        {/* Live Bandwidth Badge */}
+                        {client.status === 'online' && !client.blocked && (
+                            <div className="absolute -right-8 top-0 bg-slate-900/80 text-white text-[9px] px-1.5 py-0.5 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                {client.usage || Math.floor(Math.random()*20)} Mbps
+                            </div>
+                        )}
                         
                         <div className="mt-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur px-2 py-1 rounded shadow-sm border border-slate-100 dark:border-slate-700 text-center">
                            <div className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate max-w-[80px]">{client.name}</div>
@@ -1827,8 +2972,16 @@ key client.key`}</pre>
   };
 
   const SidebarItem = ({ id, label, icon: Icon }) => (
-    <button onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-l-4 ${activeTab === id ? 'bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-transparent'}`}>
-      <Icon className="h-5 w-5" />{label}
+    <button 
+        onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} 
+        className={`group w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all rounded-lg mb-1 ${
+            activeTab === id 
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`}
+    >
+      <Icon className={`h-5 w-5 transition-colors ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
+      {label}
     </button>
   );
 
@@ -1918,14 +3071,17 @@ key client.key`}</pre>
     <div className={`min-h-screen flex ${darkMode ? 'dark bg-slate-900' : 'bg-slate-100'}`}>
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded shadow-lg text-white text-sm font-medium animate-bounce-in ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'danger' ? 'bg-red-600' : 'bg-blue-600'}`}>{toast.message}</div>}
 
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950"><Globe className="h-6 w-6 text-blue-600 mr-2" /><span className="text-xl font-bold text-slate-800 dark:text-white">NetAdmin<span className="text-blue-600">Pro</span></span></div>
-        <nav className="mt-6 flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-100px)]">
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 md:relative md:translate-x-0 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex-shrink-0"><Globe className="h-6 w-6 text-blue-600 mr-2" /><span className="text-xl font-bold text-slate-800 dark:text-white">NetAdmin<span className="text-blue-600">Pro</span></span></div>
+        <nav className="mt-6 flex flex-col gap-1 overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
           <SidebarItem id="dashboard" label="Dashboard" icon={Activity} />
           <SidebarItem id="topology" label="Topology Map" icon={Share2} />
+          <SidebarItem id="diagnostics" label="Diagnostics" icon={Gauge} />
+          <SidebarItem id="logs" label="System Logs" icon={ClipboardList} />
           <SidebarItem id="network" label="Network" icon={Globe} />
           <SidebarItem id="wireless" label="Wireless" icon={Wifi} />
           <SidebarItem id="clients" label="Clients" icon={Smartphone} />
+          <SidebarItem id="qos" label="Traffic & QoS" icon={BarChart2} />
           <SidebarItem id="storage" label="USB Storage" icon={HardDrive} />
           <SidebarItem id="vpn" label="VPN Server" icon={Lock} />
           <SidebarItem id="security" label="Firewall" icon={Shield} />
@@ -1941,6 +3097,57 @@ key client.key`}</pre>
           </div>
           <div className="flex items-center gap-4">
              {activeScenario && <div className="hidden md:flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><AlertOctagon className="w-3 h-3" /> TROUBLESHOOTING ACTIVE</div>}
+             
+             {/* Notification Center */}
+             <div className="relative">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); setShowNotifications(!showNotifications); setShowUserMenu(false); }}
+                    className="relative text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                    <div className="relative">
+                        <Bell className="h-5 w-5" />
+                        {notifications.filter(n => !n.read).length > 0 && (
+                            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white dark:border-slate-900">
+                                {notifications.filter(n => !n.read).length}
+                            </span>
+                        )}
+                    </div>
+                </button>
+                
+                {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50 animate-fade-in-up origin-top-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                            <h3 className="font-bold text-sm text-slate-700 dark:text-slate-200">Notifications</h3>
+                            <button onClick={() => setNotifications([])} className="text-xs text-blue-500 hover:text-blue-700">Clear All</button>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                            {notifications.length === 0 ? (
+                                <div className="p-8 text-center text-slate-400 text-sm">No new notifications</div>
+                            ) : (
+                                notifications.map(n => (
+                                    <div key={n.id} className={`p-3 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${!n.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                        <div className="flex gap-3">
+                                            <div className={`mt-1 p-1.5 rounded-full h-fit ${
+                                                n.type === 'danger' ? 'bg-red-100 text-red-600' : 
+                                                n.type === 'warning' ? 'bg-yellow-100 text-yellow-600' : 
+                                                n.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                                            }`}>
+                                                {n.type === 'danger' ? <AlertOctagon size={14}/> : n.type === 'warning' ? <AlertTriangle size={14}/> : <Activity size={14}/>}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200">{n.title}</h4>
+                                                <p className="text-xs text-slate-500 mt-0.5">{n.message}</p>
+                                                <p className="text-[10px] text-slate-400 mt-1">{new Date(n.timestamp).toLocaleTimeString()}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+             </div>
+
              <button onClick={() => setDarkMode(!darkMode)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">{darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
              
              {/* USER MENU DROPDOWN */}
@@ -1953,11 +3160,11 @@ key client.key`}</pre>
                     }}
                  >
                     <div className="text-right hidden sm:block">
-                       <div className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 transition-colors">Admin User</div>
+                       <div className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 transition-colors">{session?.user ? session.user.charAt(0).toUpperCase() + session.user.slice(1) : 'User'}</div>
                        <div className="text-[10px] text-green-500">Logged In</div>
                     </div>
                     <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-xs shadow-inner ring-2 ring-transparent group-hover:ring-blue-100 transition-all">
-                        AD
+                        {session?.user ? session.user.substring(0, 2).toUpperCase() : 'US'}
                     </div>
                     <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
                  </div>
@@ -1965,8 +3172,8 @@ key client.key`}</pre>
                  {showUserMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-fade-in-down origin-top-right">
                         <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
-                            <p className="text-sm font-medium text-slate-900 dark:text-white">Administrator</p>
-                            <p className="text-xs text-slate-500 truncate">admin@local</p>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">{session?.role ? session.role.charAt(0).toUpperCase() + session.role.slice(1) : 'User'}</p>
+                            <p className="text-xs text-slate-500 truncate">{session?.user || 'user'}@local</p>
                         </div>
                         <button 
                             className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
@@ -1992,9 +3199,12 @@ key client.key`}</pre>
         <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-950">
            {activeTab === 'dashboard' && renderDashboard()}
            {activeTab === 'topology' && renderTopology()}
+           {activeTab === 'diagnostics' && renderDiagnostics()}
+           {activeTab === 'logs' && renderLogs()}
            {activeTab === 'network' && renderNetwork()}
            {activeTab === 'wireless' && renderWireless()}
            {activeTab === 'clients' && renderClients()}
+           {activeTab === 'qos' && renderQoS()}
            {activeTab === 'storage' && renderStorage()}
            {activeTab === 'vpn' && renderVPN()} 
            {activeTab === 'security' && renderSecurity()} 
@@ -2002,6 +3212,48 @@ key client.key`}</pre>
         </div>
       </main>
       
+      {/* Config Apply Bar */}
+      {isConfigDirty && (
+          <div className="fixed bottom-0 left-0 right-0 bg-slate-800 text-white p-4 shadow-lg z-50 flex justify-between items-center animate-fade-in-up border-t border-slate-700">
+              <div className="flex items-center gap-3">
+                  <div className="p-2 bg-yellow-500/20 rounded-full text-yellow-500"><AlertTriangle size={20} /></div>
+                  <div>
+                      <div className="font-bold">Unsaved Changes</div>
+                      <div className="text-xs text-slate-400">Configuration has been modified but not applied.</div>
+                  </div>
+              </div>
+              <div className="flex gap-3">
+                  <Button variant="secondary" onClick={() => {
+                      setConfig(lastAppliedConfig);
+                      setIsConfigDirty(false);
+                      showToast('Changes discarded', 'info');
+                  }}>Discard</Button>
+                  <Button onClick={handleApplyConfig}>Apply Changes</Button>
+              </div>
+          </div>
+      )}
+
+      {/* Rollback Modal */}
+      {showRollbackModal && (
+          <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-md w-full p-6 text-center border border-slate-200 dark:border-slate-700">
+                  <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Clock size={32} />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Confirm Settings</h3>
+                  <p className="text-slate-500 mb-6">
+                      New settings have been applied. If you do not confirm, the system will revert in <span className="font-bold text-slate-800 dark:text-white text-lg">{rollbackTimer}s</span> to prevent lockout.
+                  </p>
+                  <Button className="w-full justify-center py-3 text-lg" onClick={confirmConfig}>
+                      Keep Changes
+                  </Button>
+                  <button onClick={revertConfig} className="mt-4 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline">
+                      Revert Now
+                  </button>
+              </div>
+          </div>
+      )}
+
       {isMobileMenuOpen && <div onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/50 z-30 md:hidden" />}
     </div>
   );
