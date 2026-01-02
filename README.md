@@ -1,6 +1,5 @@
 # NetAdmin Pro 🚀  
-### Virtual Router Management & Network Simulation Dashboardhttps://github.com/Adityaraj3136/netadmin-pro/tree/main
-
+### Virtual Router Management & Network Simulation Dashboard
 NetAdmin Pro is a **fully interactive, enterprise-style router management interface** built using modern frontend technologies.  
 It simulates real-world router functionalities such as WAN/LAN configuration, firewall rules, VPN setup, CLI commands, and network topology visualization — similar to professional router firmware (Cisco, MikroTik, OpenWRT).
 
