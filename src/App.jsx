@@ -7,7 +7,7 @@ import {
   Cloud, Laptop, Share2, Sliders, Clock, Key, Layers, 
   BarChart2, AlertOctagon, Zap, Trash2, Plus, HardDrive, 
   Folder, FileText, Film, Music, Image as ImageIcon, Move,
-  User, ChevronDown, Edit2, Link, ClipboardList, Gauge, StopCircle, Video, Bell, Heart, Eye, EyeOff
+  User, ChevronDown, ChevronLeft, ChevronRight, Edit2, Link, ClipboardList, Gauge, StopCircle, Video, Bell, Heart, Eye, EyeOff, ExternalLink, Loader, Wrench, Info, ArrowLeft
 } from 'lucide-react';
 
 // --- UTILITIES & MOCK DATA ---
@@ -30,6 +30,13 @@ const isValidIP = (ip) => {
 
 // Default Configuration
 const DEFAULT_CONFIG = {
+  operationMode: 'router', // router, ap, repeater
+  repeater: {
+      hostSsid: '',
+      hostPassword: '',
+      connected: false,
+      signalStrength: 0
+  },
   system: {
     hostname: 'NetAdmin-Pro-X1',
     firmware: 'v3.0.0-enterprise',
@@ -55,6 +62,9 @@ const DEFAULT_CONFIG = {
   lan: {
     ip: '192.168.1.1',
     subnet: '255.255.255.0',
+    gateway: '192.168.1.1',
+    dns1: '192.168.1.1',
+    dns2: '',
     dhcpEnabled: true,
     dhcpStart: '192.168.1.100',
     dhcpEnd: '192.168.1.200',
@@ -136,30 +146,6 @@ const DEFAULT_CLIENTS = [
   { id: 4, name: 'Gaming-PC', ip: '192.168.1.110', mac: 'DD:EE:FF:77:88:99', type: 'ethernet', status: 'online', blocked: false, usage: 120, priority: 'high', downLimit: 0, upLimit: 0 },
 ];
 
-const SCENARIOS = [
-  {
-    id: 'dhcp_conflict',
-    title: 'IP Address Conflict',
-    description: 'Users report they cannot connect to the internet. The router LAN IP seems to be colliding with the WAN Gateway.',
-    setup: (cfg) => { cfg.wan.ip = '192.168.1.1'; cfg.wan.gateway = '192.168.1.1'; cfg.lan.ip = '192.168.1.1'; },
-    check: (cfg) => cfg.lan.ip !== cfg.wan.ip && cfg.lan.ip !== cfg.wan.gateway
-  },
-  {
-    id: 'wifi_security',
-    title: 'Open Wi-Fi Risk',
-    description: 'Security audit failed. The Wi-Fi network is currently open and has no password.',
-    setup: (cfg) => { cfg.wireless.security = 'none'; cfg.wireless.password = ''; },
-    check: (cfg) => cfg.wireless.security !== 'none' && cfg.wireless.password.length >= 8
-  },
-  {
-    id: 'dns_down',
-    title: 'DNS Server Failure',
-    description: 'The ISP DNS server is down. Change the WAN DNS to a public provider (e.g., 1.1.1.1 or 8.8.8.8) manually.',
-    setup: (cfg) => { cfg.wan.dns = 'auto'; },
-    check: (cfg) => cfg.wan.dns !== 'auto'
-  }
-];
-
 const MOCK_FILES = [
   { name: 'Backups', type: 'folder', size: 0, date: '2023-10-01' },
   { name: 'Movies', type: 'folder', size: 0, date: '2023-10-05' },
@@ -181,15 +167,61 @@ const DEFAULT_USERS = [
 
 // --- COMPONENTS ---
 
-const Card = ({ title, children, className = "", actions, noPadding = false }) => (
-  <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden ${className}`}>
-    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-100 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm">
-      {title}
-      {actions && <div className="flex gap-2">{actions}</div>}
+const Card = ({ title, children, className = "", actions, noPadding = false, info }) => {
+  const [showInfo, setShowInfo] = useState(false);
+
+  return (
+    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden ${className} relative`}>
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-100 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+            {title}
+            {info && (
+                <button onClick={() => setShowInfo(true)} className="text-slate-400 hover:text-blue-500 transition-colors" title="More Info">
+                    <Info size={16} />
+                </button>
+            )}
+        </div>
+        {actions && <div className="flex gap-2">{actions}</div>}
+      </div>
+      <div className={noPadding ? "" : "p-6"}>{children}</div>
+
+      {showInfo && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                    <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                        <Info size={20} className="text-blue-500"/>
+                        About {title}
+                    </h3>
+                    <button onClick={() => setShowInfo(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                    <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2">Feature Description</h4>
+                        <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{info.description}</p>
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2">How to Use</h4>
+                        <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{info.usage}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-700">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <Cpu size={14} /> Technical Explanation
+                        </h4>
+                        <p className="text-slate-600 dark:text-slate-400 text-xs font-mono leading-relaxed">{info.technical}</p>
+                    </div>
+                </div>
+                <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                    <Button onClick={() => setShowInfo(false)}>Close</Button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
-    <div className={noPadding ? "" : "p-6"}>{children}</div>
-  </div>
-);
+  );
+};
 
 const Toggle = ({ enabled, onChange, label, subLabel }) => (
   <div className="flex items-center justify-between py-3">
@@ -279,11 +311,13 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role,
     endRef.current?.scrollIntoView({ behavior: 'smooth' }); 
   }, [history]);
 
+  /* Autofocus removed as per user request
   useEffect(() => {
     if (!showConfirmModal) {
         inputRef.current?.focus();
     }
   }, [showConfirmModal]);
+  */
 
   const handleCommand = (e) => {
     if (e.key === 'Enter') {
@@ -426,7 +460,6 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role,
           value={input} 
           onChange={(e) => setInput(e.target.value)} 
           onKeyDown={handleCommand} 
-          autoFocus 
           autoComplete="off"
           spellCheck="false"
           type={cliState !== 'idle' ? "password" : "text"}
@@ -477,7 +510,7 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role,
                             setHistory(prev => [...prev, { type: 'success', text: 'passwd: password updated successfully.\nLogging out...' }]);
                             setShowConfirmModal(false);
                             setTimeout(() => {
-                                if (onLogout) onLogout();
+                                if (onLogout) onLogout('Password changed successfully');
                             }, 1500);
                         }}
                         className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded"
@@ -538,6 +571,20 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role,
 
 // --- MAIN APP ---
 
+const SidebarItem = ({ id, label, icon: Icon, activeTab, onClick }) => (
+  <button 
+      onClick={() => onClick(id)} 
+      className={`group w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all rounded-lg mb-1 ${
+          activeTab === id 
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+      }`}
+  >
+    <Icon className={`h-5 w-5 transition-colors ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
+    {label}
+  </button>
+);
+
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -545,7 +592,25 @@ export default function App() {
   const [rebooting, setRebooting] = useState(false);
   const [rebootProgress, setRebootProgress] = useState(0);
   const [toast, setToast] = useState(null);
+  const toastTimeoutRef = useRef(null);
   
+  // Scroll to top on tab change
+  const mainContentRef = useRef(null);
+
+  const handleTabChange = (id) => {
+      setActiveTab(id);
+      setIsMobileMenuOpen(false);
+      if (mainContentRef.current) {
+          mainContentRef.current.scrollTop = 0;
+      }
+  };
+
+  useEffect(() => {
+      if (mainContentRef.current) {
+          mainContentRef.current.scrollTop = 0;
+      }
+  }, [activeTab]);
+
   // Auth State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -577,9 +642,19 @@ export default function App() {
     protocol: 'TCP'
   });
 
-  // Troubleshooting Mode State
-  const [activeScenario, setActiveScenario] = useState(null);
-  const [scenarioSolved, setScenarioSolved] = useState(false);
+  const [showWifiPassword, setShowWifiPassword] = useState(false);
+  const [showGuestWifiPassword, setShowGuestWifiPassword] = useState(false);
+  
+  const fileInputRef = useRef(null);
+
+  // Terminal State
+  const [terminalHistory, setTerminalHistory] = useState([
+      { type: 'output', text: 'NetAdmin Pro CLI v3.0.0' },
+      { type: 'output', text: 'Type "help" for available commands.' },
+      { type: 'output', text: '' }
+  ]);
+  const [terminalInput, setTerminalInput] = useState('');
+  const terminalEndRef = useRef(null);
 
   // Tools: Speed Test & Sniffer State
   const [speedTest, setSpeedTest] = useState({ status: 'idle', progress: 0, ping: 0, download: 0, upload: 0 });
@@ -596,7 +671,13 @@ export default function App() {
     if (saved) {
         const parsed = JSON.parse(saved);
         // Deep merge or ensure new keys exist
-        return { ...DEFAULT_CONFIG, ...parsed, qos: parsed.qos || DEFAULT_CONFIG.qos };
+        // Force storage to default to avoid persisting mounted drive details across reloads
+        return { 
+            ...DEFAULT_CONFIG, 
+            ...parsed, 
+            qos: parsed.qos || DEFAULT_CONFIG.qos,
+            storage: DEFAULT_CONFIG.storage 
+        };
     }
     return DEFAULT_CONFIG;
   });
@@ -611,6 +692,7 @@ export default function App() {
   
   // Reset App Data State
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [resetKey, setResetKey] = useState('');
 
   const [clients, setClients] = useState(DEFAULT_CLIENTS);
@@ -623,22 +705,67 @@ export default function App() {
   // Mock Data for Analytics (Moved to top level to avoid Hook errors)
   const analyticsData = React.useMemo(() => {
       const points = analyticsPeriod === '24h' ? 24 : analyticsPeriod === '7d' ? 7 : 30;
-      return Array.from({length: points}, (_, i) => ({
-          label: analyticsPeriod === '24h' ? `${i}:00` : analyticsPeriod === '7d' ? `Day ${i+1}` : `${i+1}`,
-          down: Math.floor(Math.random() * 80) + 20,
-          up: Math.floor(Math.random() * 40) + 5
-      }));
+      
+      return Array.from({length: points}, (_, i) => {
+          let down, up, label;
+          
+          if (analyticsPeriod === '24h') {
+              label = `${i}:00`;
+              // Simulate daily curve: Low 0-6, Med 7-17, High 18-23
+              const hour = i;
+              let baseLoad = 10;
+              if (hour >= 7 && hour < 18) baseLoad = 40; // Work hours
+              if (hour >= 18 && hour <= 23) baseLoad = 80; // Peak hours
+              
+              // Add randomness
+              down = Math.floor(baseLoad + Math.random() * 40);
+              up = Math.floor(down * 0.3 + Math.random() * 10);
+          } else if (analyticsPeriod === '7d') {
+              const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+              label = days[i % 7];
+              // Weekend peak
+              const isWeekend = (i === 5 || i === 6); // Sat, Sun
+              const baseLoad = isWeekend ? 150 : 80;
+              
+              down = Math.floor(baseLoad + Math.random() * 60);
+              up = Math.floor(down * 0.2 + Math.random() * 20);
+          } else {
+              label = `Day ${i+1}`;
+              down = Math.floor(Math.random() * 100 + 50);
+              up = Math.floor(down * 0.2 + Math.random() * 10);
+          }
+
+          return { label, down, up };
+      });
   }, [analyticsPeriod]);
 
   // Memoize client usage to prevent jitter (Moved to top level)
   const clientUsage = React.useMemo(() => {
+      // Scale usage based on period
+      // Base usage per day in MB: 100MB - 5000MB (5GB)
+      const multiplier = analyticsPeriod === '24h' ? 1 : analyticsPeriod === '7d' ? 7 : 30;
+      
       // Generate usage for all clients and sort by highest usage first
-      const allClientsWithUsage = clients.map(c => ({
-          ...c,
-          usage: Math.floor(Math.random() * 500) + 50
-      }));
+      const allClientsWithUsage = clients.map(c => {
+          // Deterministic random based on client ID to ensure stability during session
+          // Use Math.sin to generate a pseudo-random number from the ID
+          const seed = c.id * 9999;
+          const pseudoRandom = (Math.sin(seed) + 1) / 2; // Value between 0 and 1
+          
+          const baseDailyUsageMB = (pseudoRandom * 4900) + 100; // 100MB to 5GB per day
+          
+          // Add a small deterministic variation based on the period to make it look slightly different across views
+          const periodOffset = analyticsPeriod === '24h' ? 0 : analyticsPeriod === '7d' ? 50 : 100;
+          
+          const totalUsageMB = Math.max(0, (baseDailyUsageMB + periodOffset) * multiplier);
+          
+          return {
+              ...c,
+              usage: Math.floor(totalUsageMB)
+          };
+      });
       return allClientsWithUsage.sort((a, b) => b.usage - a.usage).slice(0, 3);
-  }, [clients]);
+  }, [clients, analyticsPeriod]);
   
   // Dynamic System Stats (CPU/RAM)
   const [systemStats, setSystemStats] = useState({ cpu: 12, mem: 45, temp: 42, diskHealth: 'Good' });
@@ -666,8 +793,10 @@ export default function App() {
   const [nodes, setNodes] = useState({
      internet: { x: 50, y: 15 },
      router: { x: 50, y: 45 },
-     clients: clients.map((c, i) => ({ id: c.id, x: (i + 1) * (100 / (clients.length + 1)), y: 80 }))
+     clients: clients.filter(c => c.status === 'online').map((c, i) => ({ id: c.id, x: (i + 1) * (100 / (clients.filter(c => c.status === 'online').length + 1)), y: 80 }))
   });
+  
+  const [layoutMode, setLayoutMode] = useState('linear'); // 'linear' | 'mesh'
 
   // Sync nodes with clients for Topology Map
   useEffect(() => {
@@ -675,7 +804,9 @@ export default function App() {
           // Keep existing positions for existing clients
           const existingPositions = new Map(prev.clients.map(n => [n.id, {x: n.x, y: n.y}]));
           
-          const newClientNodes = clients.map((c, i) => {
+          const onlineClients = clients.filter(c => c.status === 'online');
+
+          const newClientNodes = onlineClients.map((c, i) => {
               if (existingPositions.has(c.id)) {
                   return { id: c.id, ...existingPositions.get(c.id) };
               }
@@ -701,19 +832,21 @@ export default function App() {
   const [dnsQuery, setDnsQuery] = useState('');
   const [dnsResult, setDnsResult] = useState(null);
   
+  // Storage State
+  const [storageFiles, setStorageFiles] = useState(MOCK_FILES);
+  const [isLocalMount, setIsLocalMount] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null); // { name, type, url }
+  const [currentDirHandle, setCurrentDirHandle] = useState(null);
+  const [dirHistory, setDirHistory] = useState([]); // Stack of { handle, name }
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+
   // Topology Context Menu
   const [contextMenu, setContextMenu] = useState(null);
 
   // Persistence
   useEffect(() => {
     localStorage.setItem('routerConfig', JSON.stringify(config));
-    if (activeScenario && !scenarioSolved) {
-        if (activeScenario.check(config)) {
-            setScenarioSolved(true);
-            showToast('PROBLEM SOLVED! Great job engineer.', 'success');
-        }
-    }
-  }, [config, activeScenario, scenarioSolved]);
+  }, [config]);
 
   // Main Simulation Loop (Traffic, Uptime, DPI)
   useEffect(() => {
@@ -779,9 +912,9 @@ export default function App() {
       // 4. Wi-Fi Signal Simulation
       setWifiNeighbors(prev => prev.map(n => ({
         ...n,
-        strength: Math.max(20, Math.min(95, n.strength + (Math.random() - 0.5) * 10))
+        strength: Math.floor(Math.max(20, Math.min(95, n.strength + (Math.random() - 0.5) * 10)))
       })));
-      setUserSignalStrength(prev => Math.max(60, Math.min(98, prev + (Math.random() - 0.5) * 5)));
+      setUserSignalStrength(prev => Math.floor(Math.max(60, Math.min(98, prev + (Math.random() - 0.5) * 5))));
 
       // 5. Speed Test Logic (Moved to separate effect for smoother animation)
       // if (speedTest.status === 'running') { ... }
@@ -867,8 +1000,8 @@ export default function App() {
           setClients(prev => {
               const action = Math.random();
               
-              // Toggle Online/Offline (40% chance)
-              if (action < 0.4) {
+              // 1. Toggle Online/Offline (30% chance)
+              if (action < 0.3) {
                   if (prev.length === 0) return prev;
                   const idx = Math.floor(Math.random() * prev.length);
                   const newClients = [...prev];
@@ -895,8 +1028,10 @@ export default function App() {
                   return newClients;
               }
               
-              // Add New Client (30% chance) - Max 15 clients
-              if (action < 0.7 && prev.length < 15) {
+              // 2. Add New Client (35% chance) - Max 15 clients
+              if (action < 0.65) {
+                  if (prev.length >= 15) return prev; // Cap at 15
+
                   const types = ['wifi', 'ethernet'];
                   const deviceNames = ['Guest-Phone', 'Smart-Bulb', 'Laptop-Work', 'Tablet-Kid', 'IoT-Sensor', 'Visitor-PC', 'Smart-Watch', 'Kindle'];
                   const name = `${deviceNames[Math.floor(Math.random() * deviceNames.length)]}-${Math.floor(Math.random() * 100)}`;
@@ -929,12 +1064,46 @@ export default function App() {
                   return [...prev, newClient];
               }
               
-              // Remove Offline Client (30% chance) - Keep at least 3
+              // 3. Remove Client (35% chance) - Keep at least 3
+              // This ensures the list decreases as well as increases
               if (prev.length > 3) {
+                  // Prefer removing offline clients first
                   const offlineClients = prev.filter(c => c.status === 'offline' && !c.blocked);
+                  
                   if (offlineClients.length > 0) {
                       const toRemove = offlineClients[Math.floor(Math.random() * offlineClients.length)];
+                      
+                      // Log the removal
+                      setLogs(logs => [{
+                          id: Date.now(),
+                          time: new Date().toISOString(),
+                          severity: 'Info',
+                          facility: 'DHCP',
+                          msg: `Client ${toRemove.name} lease expired (removed)`
+                      }, ...logs].slice(0, 100));
+
                       return prev.filter(c => c.id !== toRemove.id);
+                  } else {
+                      // If no offline clients, remove an online one (simulating leaving the premises)
+                      // Only if we have enough clients to spare (> 5)
+                      if (prev.length > 5) {
+                          const onlineRemovable = prev.filter(c => c.status === 'online' && !c.blocked && c.priority !== 'high');
+                          
+                          if (onlineRemovable.length > 0) {
+                              const toRemove = onlineRemovable[Math.floor(Math.random() * onlineRemovable.length)];
+                              
+                              // Log the disconnection
+                              setLogs(logs => [{
+                                  id: Date.now(),
+                                  time: new Date().toISOString(),
+                                  severity: 'Info',
+                                  facility: 'WiFi',
+                                  msg: `Client ${toRemove.name} left the network`
+                              }, ...logs].slice(0, 100));
+
+                              return prev.filter(c => c.id !== toRemove.id);
+                          }
+                      }
                   }
               }
               
@@ -968,8 +1137,19 @@ export default function App() {
             setSession(null);
             setLoginForm({ username: '', password: '' }); // Clear login form
             
+            // Reset Terminal
+            setTerminalHistory([
+                { type: 'output', text: 'NetAdmin Pro CLI v3.0.0' },
+                { type: 'output', text: 'Type "help" for available commands.' },
+                { type: 'output', text: '' }
+            ]);
+            
             if (rebootReason === 'update') {
                 showToast('Firmware updated successfully', 'success');
+            } else if (rebootReason === 'password_change') {
+                showToast('Password changed successfully', 'success');
+            } else if (rebootReason === 'factory_reset') {
+                showToast('Settings restored to default', 'success');
             } else {
                 showToast('Router rebooted successfully', 'success');
             }
@@ -985,8 +1165,12 @@ export default function App() {
   }, [rebooting, rebootReason]);
 
   const showToast = (message, type = 'info') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    toastTimeoutRef.current = setTimeout(() => {
+        setToast(null);
+        toastTimeoutRef.current = null;
+    }, 3000);
   };
 
   // Dedicated Speed Test Effect (Smoother Animation)
@@ -1051,6 +1235,21 @@ export default function App() {
 
       return () => clearInterval(interval);
   }, [speedTest.status]);
+
+  // Simulate Repeater Connection
+  useEffect(() => {
+      if (config.operationMode === 'repeater' && config.repeater.hostSsid && config.repeater.hostPassword.length > 7) {
+          if (!config.repeater.connected) {
+            const timer = setTimeout(() => {
+                updateConfig('repeater', 'connected', true);
+                showToast(`Connected to uplink: ${config.repeater.hostSsid}`, 'success');
+            }, 3000);
+            return () => clearTimeout(timer);
+          }
+      } else if (config.repeater.connected) {
+          updateConfig('repeater', 'connected', false);
+      }
+  }, [config.repeater.hostSsid, config.repeater.hostPassword, config.operationMode]);
 
   const addNotification = (title, message, type = 'info') => {
       const id = Date.now();
@@ -1124,6 +1323,14 @@ export default function App() {
       setActiveTab('dashboard');
       setLoginError('');
       setLoginAttempts({ count: 0, lockUntil: null });
+      
+      // Reset Terminal
+      setTerminalHistory([
+          { type: 'output', text: 'NetAdmin Pro CLI v3.0.0' },
+          { type: 'output', text: 'Type "help" for available commands.' },
+          { type: 'output', text: '' }
+      ]);
+      
       addAuditLog('User Login', `User ${user.username} logged in successfully`);
     } else {
       const newCount = loginAttempts.count + 1;
@@ -1142,13 +1349,21 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = (customMessage) => {
     if (session) addAuditLog('User Logout', `User ${session.user} logged out`);
     setIsLoggedIn(false);
     setShowUserMenu(false);
     setSession(null);
     setLoginForm({ username: '', password: '' });
-    showToast('Logged out successfully', 'info');
+    
+    // Reset Terminal
+    setTerminalHistory([
+        { type: 'output', text: 'NetAdmin Pro CLI v3.0.0' },
+        { type: 'output', text: 'Type "help" for available commands.' },
+        { type: 'output', text: '' }
+    ]);
+    
+    showToast(typeof customMessage === 'string' ? customMessage : 'Logged out successfully', 'info');
   };
 
   const updateConfig = (section, key, value, immediateApply = false) => {
@@ -1163,7 +1378,12 @@ export default function App() {
         return;
     }
     setConfig(prev => {
-      const next = { ...prev, [section]: { ...prev[section], [key]: value } };
+      let next;
+      if (key === null) {
+          next = { ...prev, [section]: value };
+      } else {
+          next = { ...prev, [section]: { ...prev[section], [key]: value } };
+      }
       
       if (immediateApply) {
           setLastAppliedConfig(next);
@@ -1188,6 +1408,33 @@ export default function App() {
       setIsConfigDirty(false);
       showToast('Factory Reset Complete', 'success');
       setRebooting(true);
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const parsedConfig = JSON.parse(content);
+        
+        // Basic validation
+        if (!parsedConfig.system || !parsedConfig.wan || !parsedConfig.lan) {
+            throw new Error("Invalid configuration file format");
+        }
+
+        setConfig(prev => ({...prev, ...parsedConfig}));
+        showToast('Configuration restored successfully', 'success');
+        addAuditLog('System', 'Configuration restored from backup file');
+      } catch (error) {
+        showToast('Failed to restore config: ' + error.message, 'danger');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be selected again if needed
+    event.target.value = null;
   };
 
   const handleApplyConfig = () => {
@@ -1344,35 +1591,6 @@ export default function App() {
       showToast('Rule deleted', 'info');
   };
 
-  const startScenario = (scenario) => {
-      if (!session?.token) return; // CSRF Check
-      if (session?.role !== ROLES.ADMIN) {
-          showToast('Access Denied: Admin privileges required', 'danger');
-          return;
-      }
-      const newConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-      scenario.setup(newConfig);
-      setConfig(newConfig);
-      setActiveScenario(scenario);
-      setScenarioSolved(false);
-      showToast(`Scenario Started: ${scenario.title}`, 'danger');
-      addAuditLog('Scenario Start', `Started scenario: ${scenario.title}`);
-      setActiveTab('dashboard');
-  };
-
-  const exitScenario = () => {
-      if (!session?.token) return; // CSRF Check
-      if (session?.role !== ROLES.ADMIN) {
-          showToast('Access Denied: Admin privileges required', 'danger');
-          return;
-      }
-      setActiveScenario(null);
-      setScenarioSolved(false);
-      setConfig(DEFAULT_CONFIG);
-      showToast('Exited troubleshooting mode. Restored defaults.', 'info');
-      addAuditLog('Scenario Exit', 'Exited troubleshooting mode');
-  };
-
   // --- CHART RENDERER (SVG) ---
   const PingGraph = ({ data }) => {
      const width = 100;
@@ -1387,13 +1605,13 @@ export default function App() {
      );
   };
 
-  const TrafficChart = ({ data }) => {
+  const TrafficChart = ({ data, max }) => {
      const width = 100;
      const height = 40;
-     const maxVal = 200; // Mbps scaling
+     const calculatedMax = max || Math.max(...data.map(d => Math.max(d.down, d.up)), 10);
      
-     const pointsDown = data.map((d, i) => `${(i / (data.length - 1)) * width},${height - (d.down / maxVal) * height}`).join(' ');
-     const pointsUp = data.map((d, i) => `${(i / (data.length - 1)) * width},${height - (d.up / maxVal) * height}`).join(' ');
+     const pointsDown = data.map((d, i) => `${(i / (data.length - 1)) * width},${height - (d.down / calculatedMax) * height}`).join(' ');
+     const pointsUp = data.map((d, i) => `${(i / (data.length - 1)) * width},${height - (d.up / calculatedMax) * height}`).join(' ');
 
      return (
         <svg className="w-full h-24 overflow-visible" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
@@ -1422,7 +1640,11 @@ export default function App() {
 
   const renderLogs = () => (
       <div className="max-w-6xl mx-auto space-y-6">
-          <Card title="System Log Viewer">
+          <Card title="System Log Viewer" info={{
+              description: "This is your router's 'Black Box'. It records everything happening behind the scenes, like devices connecting or errors.",
+              usage: "Check this list if something isn't working. Red items are errors, yellow are warnings, and blue are just normal info.",
+              technical: "Logs are generated by the rsyslog daemon and stored in a circular buffer in RAM to minimize flash wear. Critical security events are persisted to NVRAM."
+          }}>
               <div className="flex gap-2 mb-4">
                   <Button variant="secondary" className="text-xs h-8">All Levels</Button>
                   <Button variant="secondary" className="text-xs h-8">Info</Button>
@@ -1470,7 +1692,11 @@ export default function App() {
       <div className="max-w-6xl mx-auto space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Speed Test Card */}
-              <Card title="Internet Speed Test">
+              <Card title="Internet Speed Test" info={{
+                  description: "Check how fast your internet connection really is right now.",
+                  usage: "Click 'Start Test' and wait about 30 seconds. It measures how fast you can download (watch movies) and upload (send files).",
+                  technical: "Performs a WebSocket-based throughput test using multiple concurrent streams to saturate the WAN link. Latency is measured via ICMP echo requests."
+              }}>
                   <div className="flex flex-col items-center justify-center p-6">
                       <div className="relative w-48 h-24 mb-6 overflow-hidden">
                           {/* Gauge Arc Background */}
@@ -1519,7 +1745,11 @@ export default function App() {
               </Card>
 
               {/* Live Latency Graph */}
-              <Card title="Live Latency (Ping)">
+              <Card title="Live Latency (Ping)" info={{
+                  description: "See if your connection is 'laggy' or stable in real-time.",
+                  usage: "Watch the graph. Flat lines are good. Spikes mean your connection is stuttering, which is bad for gaming or calls.",
+                  technical: "Sends ICMP Echo Request packets every second. Jitter is calculated as the variance in RTT over the last 10 samples."
+              }}>
                   <div className="p-4">
                       <div className="flex justify-between items-end mb-2">
                           <div className="text-3xl font-bold text-slate-800 dark:text-white">
@@ -1534,7 +1764,11 @@ export default function App() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* DNS Lookup Tool */}
-              <Card title="DNS Lookup Tool">
+              <Card title="DNS Lookup Tool" info={{
+                  description: "The 'Phonebook' of the internet. Converts website names (like google.com) into computer addresses.",
+                  usage: "Type a website name to see if your router can find its address. If this fails, you can't browse the web.",
+                  technical: "Uses the system's configured DNS resolver (via getaddrinfo) to query A (IPv4) and AAAA (IPv6) records. Useful for diagnosing DNS propagation issues."
+              }}>
                   <div className="flex gap-2 mb-4">
                       <input 
                           className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 dark:text-white"
@@ -1579,7 +1813,11 @@ export default function App() {
               </Card>
 
               {/* Packet Sniffer Card */}
-              <Card title="Packet Capture (Sniffer)">
+              <Card title="Packet Capture (Sniffer)" info={{
+                  description: "Advanced Tool: Record the raw data flowing through your network cables.",
+                  usage: "Turn this on to see a list of every data packet. Useful for experts to diagnose complex connection issues.",
+                  technical: "Simulates a promiscuous mode capture on the WAN interface. Displays source/destination IPs, protocols (TCP/UDP/ICMP), and packet lengths."
+              }}>
                    <div className="flex justify-between items-center mb-4">
                        <div className="flex items-center gap-2">
                            <div className={`w-3 h-3 rounded-full ${sniffer.active ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`}></div>
@@ -1629,6 +1867,126 @@ export default function App() {
       </div>
   );
 
+  const handleTerminalCommand = (e) => {
+      if (e.key === 'Enter') {
+          const cmd = terminalInput.trim();
+          if (!cmd) return;
+
+          const newHistory = [...terminalHistory, { type: 'input', text: `admin@${config.system.hostname}:~$ ${cmd}` }];
+          
+          const args = cmd.split(' ');
+          const command = args[0].toLowerCase();
+
+          let output = [];
+
+          switch (command) {
+              case 'help':
+                  output = [
+                      'Available commands:',
+                      '  help        - Show this help message',
+                      '  clear       - Clear terminal screen',
+                      '  ipconfig    - Show network configuration',
+                      '  ping <ip>   - Simulate ping to an address',
+                      '  reboot      - Reboot the system',
+                      '  whoami      - Show current user',
+                      '  date        - Show system date',
+                      '  netstat     - Show active connections'
+                  ];
+                  break;
+              case 'clear':
+                  setTerminalHistory([]);
+                  setTerminalInput('');
+                  return;
+              case 'whoami':
+                  output = [`${session?.user || 'guest'} (privilege level: ${session?.role === ROLES.ADMIN ? '15' : '1'})`];
+                  break;
+              case 'date':
+                  output = [new Date().toString()];
+                  break;
+              case 'ipconfig':
+              case 'ifconfig':
+                  output = [
+                      'eth0      Link encap:Ethernet  HWaddr ' + config.wan.clonedMac,
+                      `          inet addr:${config.wan.ip}  Bcast:${config.wan.gateway}  Mask:255.255.255.0`,
+                      `          UP BROADCAST RUNNING MULTICAST  MTU:${config.wan.mtu}  Metric:1`,
+                      '          RX packets:1245 errors:0 dropped:0 overruns:0 frame:0',
+                      '          TX packets:943 errors:0 dropped:0 overruns:0 carrier:0',
+                      '',
+                      'br0       Link encap:Ethernet  HWaddr AA:BB:CC:DD:EE:FF',
+                      `          inet addr:${config.lan.ip}  Bcast:192.168.1.255  Mask:${config.lan.subnet}`,
+                      '          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1'
+                  ];
+                  break;
+              case 'ping':
+                  if (!args[1]) {
+                      output = ['Usage: ping <ip_address>'];
+                  } else {
+                      output = [`Pinging ${args[1]} with 32 bytes of data:`];
+                      // Simulate async ping results would be complex here, so we just show immediate "success"
+                      for(let i=0; i<4; i++) {
+                          const time = Math.floor(Math.random() * 20) + 10;
+                          output.push(`Reply from ${args[1]}: bytes=32 time=${time}ms TTL=64`);
+                      }
+                      output.push('');
+                      output.push(`Ping statistics for ${args[1]}:`);
+                      output.push('    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)');
+                  }
+                  break;
+              case 'reboot':
+                  output = ['System is going down for reboot NOW!'];
+                  setTimeout(() => setRebooting(true), 1000);
+                  break;
+              case 'netstat':
+                  output = [
+                      'Active Internet connections (w/o servers)',
+                      'Proto Recv-Q Send-Q Local Address           Foreign Address         State',
+                      `tcp        0      0 ${config.wan.ip}:443      104.21.55.2:54322       ESTABLISHED`,
+                      `tcp        0      0 ${config.lan.ip}:80       192.168.1.105:51234     ESTABLISHED`,
+                      `udp        0      0 0.0.0.0:67              0.0.0.0:*`
+                  ];
+                  break;
+              case 'hack':
+                  output = ['Accessing mainframe...', 'Bypassing firewall...', 'Downloading sensitive data...', 'Just kidding! Stay safe.'];
+                  break;
+              default:
+                  output = [`Command not found: ${command}`];
+          }
+
+          setTerminalHistory([...newHistory, ...output.map(line => ({ type: 'output', text: line }))]);
+          setTerminalInput('');
+          
+          // Auto scroll
+          setTimeout(() => {
+              if (terminalEndRef.current) {
+                  terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+              }
+          }, 10);
+      }
+  };
+
+  const renderTerminal = () => (
+      <div className="h-[calc(100vh-140px)] bg-slate-900 rounded-lg shadow-inner border border-slate-700 p-4 font-mono text-sm overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar">
+              {terminalHistory.map((line, i) => (
+                  <div key={i} className={`${line.type === 'input' ? 'text-yellow-400 mt-2' : 'text-green-400'}`}>
+                      {line.text}
+                  </div>
+              ))}
+              <div ref={terminalEndRef} />
+          </div>
+          <div className="mt-2 flex items-center gap-2 border-t border-slate-700 pt-2">
+              <span className="text-green-500 font-bold">admin@{config.system.hostname}:~$</span>
+              <input 
+                  type="text" 
+                  value={terminalInput}
+                  onChange={(e) => setTerminalInput(e.target.value)}
+                  onKeyDown={handleTerminalCommand}
+                  className="flex-1 bg-transparent border-none outline-none text-white focus:ring-0 p-0"
+              />
+          </div>
+      </div>
+  );
+
   const renderDashboard = () => {
     // Calculate client stats for dashboard
     const onlineClients = clients.filter(c => c.status === 'online');
@@ -1637,33 +1995,6 @@ export default function App() {
 
     return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
-      {activeScenario && (
-          <div className="col-span-1 lg:col-span-12 bg-red-100 dark:bg-red-900/30 border-l-4 border-red-500 p-4 mb-4 rounded-r shadow-sm">
-              <div className="flex items-center justify-between">
-                  <div>
-                      <h3 className="text-red-800 dark:text-red-200 font-bold flex items-center gap-2">
-                          <AlertOctagon className="w-5 h-5"/> Troubleshooting: {activeScenario.title}
-                      </h3>
-                      <p className="text-sm text-red-700 dark:text-red-300 mt-1">{activeScenario.description}</p>
-                  </div>
-                  {scenarioSolved ? (
-                      <Button variant="success" onClick={exitScenario} icon={CheckCircle}>Finish & Exit</Button>
-                  ) : (
-                      <div className="flex items-center gap-4">
-                        <div className="text-red-600 font-bold animate-pulse text-sm uppercase tracking-wider">Fix Pending...</div>
-                        <button 
-                          onClick={exitScenario} 
-                          className="text-red-400 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200 transition-colors p-1"
-                          title="Exit Troubleshooting Mode"
-                        >
-                          <X size={20} />
-                        </button>
-                      </div>
-                  )}
-              </div>
-          </div>
-      )}
-
       {/* Main Content Area */}
       <div className="lg:col-span-8 flex flex-col gap-6">
           {/* Top Row: Hero Status Cards */}
@@ -1677,12 +2008,20 @@ export default function App() {
                 <div className="relative z-10 mt-4">
                     <div className="flex flex-col gap-2 text-xs font-mono bg-black/20 p-3 rounded-lg w-full">
                       <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
+                          <span className="opacity-50 uppercase">Type</span> 
+                          <span className="uppercase">{config.wan.type === 'dhcp' ? 'Dynamic IP (DHCP)' : config.wan.type === 'static' ? 'Static IP' : config.wan.type === 'pppoe' ? 'PPPoE' : config.wan.type}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
                           <span className="opacity-50 uppercase">WAN IP</span> 
-                          <span>{config.wan.ip}</span>
+                          <span>{config.operationMode === 'ap' ? config.lan.ip : config.wan.ip}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
+                          <span className="opacity-50 uppercase">Gateway</span> 
+                          <span>{config.operationMode === 'ap' ? config.lan.gateway : config.wan.gateway}</span>
                       </div>
                       <div className="flex justify-between">
-                          <span className="opacity-50 uppercase">Gateway</span> 
-                          <span>{config.wan.gateway}</span>
+                          <span className="opacity-50 uppercase">DNS</span> 
+                          <span>{config.wan.type === 'static' && config.wan.dns === 'auto' ? '8.8.8.8' : (config.wan.dns === 'auto' ? 'Auto (ISP)' : config.wan.dns)}</span>
                       </div>
                     </div>
                 </div>
@@ -1859,13 +2198,92 @@ export default function App() {
              </div>
          </div>
       </div>
+
+      {/* Footer */}
+      <div className="col-span-1 lg:col-span-12 mt-4 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center opacity-70 hover:opacity-100 transition-opacity">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Network Admin Simulator &copy; {new Date().getFullYear()}
+          </p>
+          <a 
+            href="https://adityaraj3136.github.io/adityatechlab/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-[10px] text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mt-1 hover:underline transition-colors flex items-center gap-1"
+          >
+              Developed by Aditya Tech Lab <ExternalLink size={10} />
+          </a>
+      </div>
     </div>
   );
   };
 
   const renderNetwork = () => (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <Card title="WAN Settings (Internet)">
+      <Card title="Operation Mode" info={{
+          description: "Choose how this box fits into your home network.",
+          usage: "Use 'Router' if this is your main device. Use 'Repeater' to boost Wi-Fi from another room.",
+          technical: "Router: NAT/DHCP enabled. AP: NAT/DHCP disabled, bridges WAN/LAN/WLAN. Repeater: Client mode on one radio, AP on another, bridging traffic."
+      }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                  { id: 'router', label: 'Router Mode', icon: Globe, desc: 'Standard mode. Shares internet via NAT/DHCP.' },
+                  { id: 'ap', label: 'Access Point', icon: Share2, desc: 'Extends existing wired network via Wi-Fi.' },
+                  { id: 'repeater', label: 'Repeater', icon: Wifi, desc: 'Extends existing Wi-Fi network wirelessly.' }
+              ].map(mode => (
+                  <div 
+                    key={mode.id}
+                    onClick={() => updateConfig('operationMode', null, mode.id)}
+                    className={`cursor-pointer p-4 rounded-lg border-2 transition-all ${config.operationMode === mode.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
+                  >
+                      <div className="flex items-center gap-2 mb-2">
+                          <mode.icon size={20} className={config.operationMode === mode.id ? 'text-blue-600' : 'text-slate-500'} />
+                          <span className={`font-bold ${config.operationMode === mode.id ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}>{mode.label}</span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{mode.desc}</p>
+                  </div>
+              ))}
+          </div>
+      </Card>
+
+      {config.operationMode === 'repeater' && (
+          <Card title="Wireless Uplink (Repeater)" info={{
+              description: "Connect this router to another Wi-Fi network wirelessly.",
+              usage: "Pick the Wi-Fi name you want to boost and type its password. This router will then rebroadcast that signal.",
+              technical: "Uses WDS (Wireless Distribution System) or universal repeater mode (proxy ARP) to bridge the local LAN segment to the upstream Wi-Fi network."
+          }}>
+              <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Host Network</span>
+                      <Button variant="secondary" icon={RefreshCw} onClick={() => showToast('Scanning for networks...', 'info')}>Scan</Button>
+                  </div>
+                  <Select 
+                      label="Select Host SSID"
+                      value={config.repeater.hostSsid}
+                      onChange={(e) => updateConfig('repeater', 'hostSsid', e.target.value)}
+                      options={[
+                          { label: 'Select a network...', value: '' },
+                          ...wifiNeighbors.map(n => ({ label: `${n.name} (Ch ${n.channel}, ${n.strength}%)`, value: n.name }))
+                      ]}
+                  />
+                  <Input 
+                      type="password" 
+                      label="Host Password" 
+                      value={config.repeater.hostPassword} 
+                      onChange={(e) => updateConfig('repeater', 'hostPassword', e.target.value)} 
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                      <div className={`w-3 h-3 rounded-full ${config.repeater.connected ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">{config.repeater.connected ? 'Connected to Host' : 'Disconnected'}</span>
+                  </div>
+              </div>
+          </Card>
+      )}
+      {config.operationMode === 'router' && (
+      <Card title="WAN Settings (Internet)" info={{
+          description: "This controls how you get internet from your provider (ISP).",
+          usage: "Most people use 'Dynamic IP'. If you have a username/password from your ISP, use 'PPPoE'.",
+          technical: "Controls the eth0 interface configuration. DHCP client requests IP/Gateway/DNS. PPPoE handles authentication and encapsulation over Ethernet."
+      }}>
         <Select 
           label="Connection Type" 
           options={[{label: 'Dynamic IP (DHCP)', value: 'dhcp'}, {label: 'Static IP', value: 'static'}, {label: 'PPPoE', value: 'pppoe'}]}
@@ -1915,11 +2333,19 @@ export default function App() {
              )}
         </div>
       </Card>
+      )}
 
-      <Card title="LAN Settings">
+      <Card title="LAN Settings" info={{
+          description: "Settings for your home network (Local Area Network).",
+          usage: "Change the 'Router IP' if it conflicts with your modem. Leave the rest unless you know what you are doing.",
+          technical: "Configures the br-lan bridge interface IP and the dnsmasq service for DHCP/DNS. Changing this may require reconnecting devices."
+      }}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label="Router IP Address" value={config.lan.ip} onChange={(e) => updateConfig('lan', 'ip', e.target.value)} />
           <Input label="Subnet Mask" value={config.lan.subnet} onChange={(e) => updateConfig('lan', 'subnet', e.target.value)} />
+          {config.operationMode === 'ap' && (
+              <Input label="Gateway IP" value={config.lan.gateway} onChange={(e) => updateConfig('lan', 'gateway', e.target.value)} />
+          )}
         </div>
         
         <div className="mt-4">
@@ -1934,12 +2360,18 @@ export default function App() {
               <Input label="End IP Address" value={config.lan.dhcpEnd} onChange={(e) => updateConfig('lan', 'dhcpEnd', e.target.value)} />
               <Input label="Address Lease Time (Minutes)" value={config.lan.leaseTime} onChange={(e) => updateConfig('lan', 'leaseTime', e.target.value)} />
               <Input label="Gateway (Optional)" placeholder={config.lan.ip} value="" onChange={() => {}} />
+              <Input label="Primary DNS" value={config.lan.dns1} onChange={(e) => updateConfig('lan', 'dns1', e.target.value)} />
+              <Input label="Secondary DNS" value={config.lan.dns2} onChange={(e) => updateConfig('lan', 'dns2', e.target.value)} />
             </div>
           )}
         </div>
       </Card>
 
-      <Card title="Dynamic DNS (DDNS)">
+      <Card title="Dynamic DNS (DDNS)" info={{
+          description: "Give your home network a permanent name (like myhouse.com) so you can find it from anywhere.",
+          usage: "Sign up for a service like No-IP, then enter your details here. Useful for accessing cameras or files remotely.",
+          technical: "Runs a background daemon (inadyn or ddclient) that periodically checks the public WAN IP and updates the A record at the DNS provider via API."
+      }}>
          <Toggle label="Enable DDNS" subLabel="Remote access via domain name" enabled={config.ddns.enabled} onChange={(v) => updateConfig('ddns', 'enabled', v)} />
          {config.ddns.enabled && (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-fade-in">
@@ -1956,7 +2388,11 @@ export default function App() {
          )}
       </Card>
       
-      <Card title="VLAN Configuration (802.1Q)">
+      <Card title="VLAN Configuration (802.1Q)" info={{
+          description: "Advanced: Split your network into separate 'virtual' networks.",
+          usage: "Keep smart home devices separate from your main computer for security. Requires a managed switch.",
+          technical: "Configures the switch fabric to add/remove 802.1Q tags on frames. Creates virtual interfaces (e.g., eth0.10, eth0.20) for routing between VLANs."
+      }}>
          <Toggle label="Enable VLANs" enabled={config.vlan.enabled} onChange={(v) => updateConfig('vlan', 'enabled', v)} />
          {config.vlan.enabled && (
              <div className="mt-4 overflow-x-auto">
@@ -2013,6 +2449,16 @@ export default function App() {
   );
 
   const renderWireless = () => {
+    const calculateStrength = (pwd) => {
+        if (!pwd) return 0;
+        let score = 0;
+        if (pwd.length > 7) score++;
+        if (pwd.match(/[A-Z]/)) score++;
+        if (pwd.match(/[0-9]/)) score++;
+        if (pwd.match(/[^A-Za-z0-9]/)) score++;
+        return score;
+    };
+
     // Channel Optimization Logic
     const recommendChannel = () => {
         const scores = {};
@@ -2049,7 +2495,11 @@ export default function App() {
 
     return (
     <div className="space-y-6 max-w-4xl mx-auto">
-       <Card title="Wi-Fi Channel Analyzer">
+       <Card title="Wi-Fi Channel Analyzer" info={{
+           description: "See all the Wi-Fi networks around you to find the clearest spot.",
+           usage: "If your Wi-Fi is slow, check this graph. If your curve overlaps with many others, switch to a different channel.",
+           technical: "Scans the 2.4GHz and 5GHz spectrums. Displays RSSI (Received Signal Strength Indicator) of neighboring beacons to help avoid Co-Channel Interference (CCI)."
+       }}>
           <div className="flex justify-between items-center mb-2">
              <div className="flex items-center gap-2 text-xs">
                 <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Your Network</span>
@@ -2152,7 +2602,11 @@ export default function App() {
        </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card title="Main Network">
+          <Card title="Main Network" info={{
+              description: "Change your Wi-Fi name and password.",
+              usage: "Pick a name (SSID) you can recognize. Use a strong password to keep neighbors out.",
+              technical: "Configures the hostapd daemon. Controls SSID broadcasting, encryption (CCMP/GCMP), and authentication (PSK/SAE)."
+          }}>
             <Toggle label="Enable Wireless Radio" enabled={config.wireless.enabled} onChange={(v) => updateConfig('wireless', 'enabled', v)} />
             <div className={`mt-4 space-y-4 transition-opacity ${!config.wireless.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
                <Input label="Network Name (SSID)" value={config.wireless.ssid} onChange={(e) => updateConfig('wireless', 'ssid', e.target.value)} />
@@ -2163,16 +2617,96 @@ export default function App() {
                    options={[{label: 'No Security', value: 'none'}, {label: 'WPA2-PSK (AES)', value: 'wpa2'}, {label: 'WPA3-SAE', value: 'wpa3'}]} 
                  />
                {config.wireless.security !== 'none' && (
-                 <Input type="password" label="Wireless Password" value={config.wireless.password} onChange={(e) => updateConfig('wireless', 'password', e.target.value)} />
+                 <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Wireless Password</label>
+                    <div className="relative">
+                        <input 
+                            type={showWifiPassword ? "text" : "password"}
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all"
+                            value={config.wireless.password}
+                            onChange={(e) => updateConfig('wireless', 'password', e.target.value)}
+                        />
+                        <button 
+                            type="button"
+                            onClick={() => setShowWifiPassword(!showWifiPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                            {showWifiPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                    </div>
+                    {/* Strength Meter */}
+                    <div className="mt-2">
+                        <div className="flex gap-1 h-1 mb-1">
+                            {[1, 2, 3, 4].map(level => {
+                                const strength = calculateStrength(config.wireless.password);
+                                let color = 'bg-slate-200 dark:bg-slate-700';
+                                if (strength >= level) {
+                                    if (strength === 1) color = 'bg-red-500';
+                                    else if (strength === 2) color = 'bg-orange-500';
+                                    else if (strength === 3) color = 'bg-yellow-500';
+                                    else if (strength === 4) color = 'bg-green-500';
+                                }
+                                return <div key={level} className={`flex-1 rounded-full ${color} transition-colors duration-300`}></div>
+                            })}
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-400">
+                            <span>Strength</span>
+                            <span>{['Weak', 'Fair', 'Good', 'Strong'][calculateStrength(config.wireless.password) - 1] || 'Too Short'}</span>
+                        </div>
+                    </div>
+                 </div>
                )}
             </div>
           </Card>
 
-          <Card title="Guest Network">
+          <Card title="Guest Network" info={{
+              description: "A safe, separate Wi-Fi for friends and visitors.",
+              usage: "Turn this on so guests can get online without accessing your private files or printer.",
+              technical: "Creates a virtual AP interface (wlan0-1) bridged to a separate VLAN or firewall zone. Client isolation uses AP isolation to block peer-to-peer frames."
+          }}>
              <Toggle label="Enable Guest Network" subLabel="Isolate guests from main LAN" enabled={config.wireless.guestEnabled} onChange={(v) => updateConfig('wireless', 'guestEnabled', v)} />
              <div className={`mt-4 space-y-4 transition-opacity ${!config.wireless.guestEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
                 <Input label="Guest SSID" value={config.wireless.guestSsid} onChange={(e) => updateConfig('wireless', 'guestSsid', e.target.value)} />
-                <Input type="password" label="Guest Password" value={config.wireless.guestPassword} onChange={(e) => updateConfig('wireless', 'guestPassword', e.target.value)} />
+                
+                 <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Guest Password</label>
+                    <div className="relative">
+                        <input 
+                            type={showGuestWifiPassword ? "text" : "password"}
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all"
+                            value={config.wireless.guestPassword}
+                            onChange={(e) => updateConfig('wireless', 'guestPassword', e.target.value)}
+                        />
+                        <button 
+                            type="button"
+                            onClick={() => setShowGuestWifiPassword(!showGuestWifiPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                            {showGuestWifiPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                    </div>
+                    {/* Strength Meter */}
+                    <div className="mt-2">
+                        <div className="flex gap-1 h-1 mb-1">
+                            {[1, 2, 3, 4].map(level => {
+                                const strength = calculateStrength(config.wireless.guestPassword);
+                                let color = 'bg-slate-200 dark:bg-slate-700';
+                                if (strength >= level) {
+                                    if (strength === 1) color = 'bg-red-500';
+                                    else if (strength === 2) color = 'bg-orange-500';
+                                    else if (strength === 3) color = 'bg-yellow-500';
+                                    else if (strength === 4) color = 'bg-green-500';
+                                }
+                                return <div key={level} className={`flex-1 rounded-full ${color} transition-colors duration-300`}></div>
+                            })}
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-400">
+                            <span>Strength</span>
+                            <span>{['Weak', 'Fair', 'Good', 'Strong'][calculateStrength(config.wireless.guestPassword) - 1] || 'Too Short'}</span>
+                        </div>
+                    </div>
+                 </div>
+
                 <Toggle label="AP Isolation" subLabel="Prevent guests from seeing each other" enabled={config.wireless.guestIsolation} onChange={(v) => updateConfig('wireless', 'guestIsolation', v)} />
              </div>
           </Card>
@@ -2240,7 +2774,11 @@ export default function App() {
         </div>
       )}
 
-      <Card title="Client List & Access Control">
+      <Card title="Client List & Access Control" info={{
+          description: "See every phone, laptop, and gadget connected to your Wi-Fi.",
+          usage: "If you see a device you don't recognize, you can 'Block' it here to kick it off your network.",
+          technical: "Reads the DHCP lease table and ARP cache. Blocking adds the MAC address to the hostapd deny list (MAC filtering) or firewall drop rule."
+      }}>
         <div className="mb-4 flex gap-2">
            <div className="relative flex-1">
              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -2248,7 +2786,7 @@ export default function App() {
            </div>
            <Button variant="secondary" icon={RefreshCw} onClick={() => {}}>Refresh</Button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900">
@@ -2260,10 +2798,10 @@ export default function App() {
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
               {clients.map(client => (
-                <tr key={client.id}>
+                <tr key={client.id} className={client.status === 'offline' ? 'opacity-60 bg-slate-50 dark:bg-slate-900/50' : ''}>
                   <td className="px-6 py-4">
                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${client.type === 'wifi' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                        <div className={`p-2 rounded-lg ${client.status === 'offline' ? 'bg-slate-200 text-slate-500' : client.type === 'wifi' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
                            {client.type === 'wifi' ? <Wifi size={16}/> : <Server size={16}/>}
                         </div>
                         <div>
@@ -2309,7 +2847,11 @@ export default function App() {
         </div>
       </Card>
       
-      <Card title="Parental Controls & Scheduling">
+      <Card title="Parental Controls & Scheduling" info={{
+          description: "Manage when and what your kids can access online.",
+          usage: "Set 'Bedtime' schedules to turn off internet at night, or block specific apps like TikTok.",
+          technical: "Uses iptables time-based rules to drop packets outside allowed windows. Domain blocking uses dnsmasq to return 0.0.0.0 for blacklisted domains."
+      }}>
          <div className="flex justify-between items-center mb-4">
             <Toggle label="Enable Parental Control" enabled={config.parental.enabled} onChange={(v) => updateConfig('parental', 'enabled', v)} />
             <Button 
@@ -2376,15 +2918,194 @@ export default function App() {
     </div>
   );
 
+  const loadDirectory = async (dirHandle) => {
+      setIsLoadingFiles(true);
+      const files = [];
+      try {
+          for await (const entry of dirHandle.values()) {
+              if (entry.kind === 'file') {
+                  try {
+                      const file = await entry.getFile();
+                      files.push({
+                          name: entry.name,
+                          type: 'file',
+                          size: file.size,
+                          date: new Date(file.lastModified).toISOString().split('T')[0],
+                          fileObj: file,
+                          handle: entry
+                      });
+                  } catch (e) {
+                      files.push({ name: entry.name, type: 'file', size: 0, date: '-', handle: entry });
+                  }
+              } else if (entry.kind === 'directory') {
+                  files.push({ name: entry.name, type: 'folder', size: 0, date: '-', handle: entry });
+              }
+          }
+          // Sort: folders first
+          files.sort((a, b) => {
+              if (a.type === b.type) return a.name.localeCompare(b.name);
+              return a.type === 'folder' ? -1 : 1;
+          });
+          
+          setStorageFiles(files);
+          setCurrentDirHandle(dirHandle);
+      } catch (error) {
+          console.error("Error loading directory:", error);
+          showToast("Failed to load directory contents", "danger");
+      } finally {
+          setIsLoadingFiles(false);
+      }
+  };
+
+  const handleMountLocalDrive = async () => {
+      if (isLocalMount) {
+          // Unmount / Reset
+          setStorageFiles(MOCK_FILES);
+          setIsLocalMount(false);
+          setCurrentDirHandle(null);
+          setDirHistory([]);
+          setConfig(prev => ({
+              ...prev,
+              storage: {
+                  ...prev.storage,
+                  name: DEFAULT_CONFIG.storage.name,
+                  used: DEFAULT_CONFIG.storage.used,
+                  total: DEFAULT_CONFIG.storage.total
+              }
+          }));
+          showToast('Local drive unmounted', 'info');
+          return;
+      }
+
+      try {
+          // Check if API is supported
+          if (!window.showDirectoryPicker) {
+              showToast('File System Access API not supported in this browser', 'danger');
+              return;
+          }
+
+          const dirHandle = await window.showDirectoryPicker();
+          await loadDirectory(dirHandle);
+          setIsLocalMount(true);
+          
+          // Update storage stats (approximate based on root scan)
+          // Note: This only counts files in root, recursive size is expensive
+          setConfig(prev => ({
+              ...prev,
+              storage: {
+                  ...prev.storage,
+                  name: dirHandle.name,
+                  used: 1024 * 1024 * 100, // Mock usage for now as recursive scan is slow
+                  total: 1024 * 1024 * 1024 * 100 // 100GB
+              }
+          }));
+          
+          showToast(`Mounted local directory: ${dirHandle.name}`, 'success');
+      } catch (err) {
+          if (err.name !== 'AbortError') {
+              console.error(err);
+              showToast('Failed to mount local drive', 'danger');
+          }
+      }
+  };
+
+  const handleNavigateUp = async () => {
+      if (dirHistory.length === 0) return;
+      const prev = dirHistory[dirHistory.length - 1];
+      const newHistory = dirHistory.slice(0, -1);
+      setDirHistory(newHistory);
+      await loadDirectory(prev.handle);
+  };
+
+  const navigatePreview = (direction) => {
+      if (!storageFiles.length || !previewFile) return;
+
+      let currentIndex = previewFile.index;
+      let nextIndex = currentIndex;
+      let attempts = 0;
+
+      // Loop to find next viewable file
+      while (attempts < storageFiles.length) {
+          nextIndex = (nextIndex + direction + storageFiles.length) % storageFiles.length;
+          const file = storageFiles[nextIndex];
+          
+          if (file.type !== 'folder' && file.fileObj) {
+              const type = file.fileObj.type;
+              if (type.startsWith('image/') || type.startsWith('video/') || type.startsWith('audio/')) {
+                  // Found one!
+                  const url = URL.createObjectURL(file.fileObj);
+                  let previewType = 'image';
+                  if (type.startsWith('audio/')) previewType = 'audio';
+                  if (type.startsWith('video/')) previewType = 'video';
+                  
+                  setPreviewFile({ name: file.name, type: previewType, url, index: nextIndex });
+                  break;
+              }
+          }
+          attempts++;
+      }
+  };
+
+  const handleFileClick = async (file, index) => {
+      if (file.type === 'folder') {
+          if (file.handle) {
+              setDirHistory(prev => [...prev, { handle: currentDirHandle, name: currentDirHandle.name }]);
+              await loadDirectory(file.handle);
+          }
+          return;
+      }
+      
+      if (file.fileObj) {
+          // It's a real local file
+          const url = URL.createObjectURL(file.fileObj);
+          const type = file.fileObj.type;
+          
+          if (type.startsWith('image/')) {
+              setPreviewFile({ name: file.name, type: 'image', url, index });
+          } else if (type.startsWith('audio/')) {
+              setPreviewFile({ name: file.name, type: 'audio', url, index });
+          } else if (type.startsWith('video/')) {
+              setPreviewFile({ name: file.name, type: 'video', url, index });
+          } else {
+              showToast(`Preview not available for this file`, 'warning');
+          }
+      } else {
+          // Mock file
+          showToast(`Preview not available for this file`, 'info');
+      }
+  };
+
+  // Keyboard Navigation for Preview
+  useEffect(() => {
+      if (!previewFile) return;
+
+      const handleKeyDown = (e) => {
+          if (e.key === 'ArrowRight') {
+              navigatePreview(1);
+          } else if (e.key === 'ArrowLeft') {
+              navigatePreview(-1);
+          } else if (e.key === 'Escape') {
+              setPreviewFile(null);
+          }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewFile, storageFiles]);
+
   const renderStorage = () => (
      <div className="max-w-5xl mx-auto space-y-6">
-        <Card title="USB Storage & File Sharing">
+        <Card title="USB Storage & File Sharing" info={{
+            description: "Turn your router into a mini file server.",
+            usage: "Plug a USB stick into the router to share photos or movies with everyone in the house.",
+            technical: "Mounts the USB partition (ext4/ntfs/fat32) and exports it via Samba (smbd) or vsftpd. Supports user-based permissions."
+        }}>
            <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
                  <div className="p-4 bg-blue-100 text-blue-600 rounded-lg"><HardDrive size={32} /></div>
                  <div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-white">{config.storage.name}</h3>
-                    <p className="text-sm text-slate-500">File System: NTFS</p>
+                    <p className="text-sm text-slate-500">File System: {isLocalMount ? 'Local FS' : 'NTFS'}</p>
                  </div>
               </div>
               <div className="text-right">
@@ -2392,19 +3113,45 @@ export default function App() {
               </div>
            </div>
            <div className="mt-4 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
-               <div className="h-full bg-blue-500 w-[45%]"></div>
+               <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (config.storage.used / config.storage.total) * 100)}%` }}></div>
            </div>
            
            <div className="mt-8">
-              <h4 className="font-medium mb-4 text-slate-700 dark:text-slate-300 border-b pb-2 dark:border-slate-700">File Explorer</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 {MOCK_FILES.map((file, i) => (
-                    <div key={i} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer group">
-                       <div className="mb-2 text-slate-400 group-hover:text-blue-500">
-                          {file.type === 'folder' ? <Folder size={40} className="fill-current"/> : file.name.endsWith('jpg') ? <ImageIcon size={40}/> : <FileText size={40}/>}
+              <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
+                  <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-slate-700 dark:text-slate-300">File Explorer {isLocalMount && '(Local Mount)'}</h4>
+                      {isLocalMount && dirHistory.length > 0 && (
+                          <button onClick={handleNavigateUp} className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1 transition-colors">
+                              <ArrowLeft size={12} /> Back
+                          </button>
+                      )}
+                  </div>
+                  <Button variant="secondary" className="h-8 text-xs" icon={HardDrive} onClick={handleMountLocalDrive}>
+                      {isLocalMount ? 'Unmount / Reset' : 'Mount Local Drive'}
+                  </Button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative min-h-[200px]">
+                 {isLoadingFiles && (
+                     <div className="absolute inset-0 bg-white/80 dark:bg-slate-800/80 z-10 flex flex-col items-center justify-center backdrop-blur-sm rounded-lg">
+                         <Loader className="animate-spin text-blue-500 mb-2" size={32} />
+                         <span className="text-sm text-slate-500 font-medium">Loading files...</span>
+                     </div>
+                 )}
+                 {storageFiles.map((file, i) => (
+                    <div 
+                        key={i} 
+                        className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer group transition-all hover:shadow-md"
+                        onClick={() => handleFileClick(file, i)}
+                    >
+                       <div className="mb-2 text-slate-400 group-hover:text-blue-500 flex justify-center">
+                          {file.type === 'folder' ? <Folder size={40} className="fill-current"/> : 
+                           (file.name.endsWith('jpg') || file.name.endsWith('png') || file.name.endsWith('jpeg') || file.name.endsWith('gif')) ? <ImageIcon size={40}/> : 
+                           (file.name.endsWith('mp3') || file.name.endsWith('wav')) ? <Music size={40}/> :
+                           (file.name.endsWith('mp4') || file.name.endsWith('mkv') || file.name.endsWith('mov')) ? <Film size={40}/> :
+                           <FileText size={40}/>}
                        </div>
-                       <div className="truncate font-medium text-sm text-slate-700 dark:text-slate-300">{file.name}</div>
-                       <div className="text-xs text-slate-400 mt-1">{file.type === 'folder' ? '-' : formatBytes(file.size)}</div>
+                       <div className="truncate font-medium text-sm text-slate-700 dark:text-slate-300 text-center" title={file.name}>{file.name}</div>
+                       <div className="text-xs text-slate-400 mt-1 text-center">{file.type === 'folder' ? '-' : formatBytes(file.size)}</div>
                     </div>
                  ))}
                  <div className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 cursor-pointer">
@@ -2414,12 +3161,53 @@ export default function App() {
               </div>
            </div>
         </Card>
+
+        {/* File Preview Modal */}
+        {previewFile && (
+            <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-fade-in" onClick={() => setPreviewFile(null)}>
+                <div className="bg-white dark:bg-slate-900 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                        <h3 className="font-bold text-slate-800 dark:text-white truncate">{previewFile.name}</h3>
+                        <button onClick={() => setPreviewFile(null)} className="text-slate-500 hover:text-white"><X size={24}/></button>
+                    </div>
+                    <div className="flex-1 bg-black flex items-center justify-center p-4 overflow-auto relative group">
+                        <button 
+                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                            onClick={(e) => { e.stopPropagation(); navigatePreview(-1); }}
+                        >
+                            <ChevronLeft size={32} />
+                        </button>
+
+                        {previewFile.type === 'image' && (
+                            <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-[70vh] object-contain" />
+                        )}
+                        {previewFile.type === 'audio' && (
+                            <audio controls autoPlay src={previewFile.url} className="w-full max-w-md" />
+                        )}
+                        {previewFile.type === 'video' && (
+                            <video controls autoPlay src={previewFile.url} className="max-w-full max-h-[70vh]" />
+                        )}
+
+                        <button 
+                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
+                            onClick={(e) => { e.stopPropagation(); navigatePreview(1); }}
+                        >
+                            <ChevronRight size={32} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
      </div>
   );
 
   const renderVPN = () => (
     <div className="max-w-4xl mx-auto space-y-6">
-        <Card title="VPN Server Configuration">
+        <Card title="VPN Server Configuration" info={{
+            description: "Access your home files safely when you are at a coffee shop or traveling.",
+            usage: "Turn this on and use the app on your phone. It's like a secure tunnel back to your house.",
+            technical: "Runs a WireGuard interface (wg0) listening on a UDP port. Generates public/private key pairs for peers and configures routing/NAT for remote access."
+        }}>
             <Toggle label="Enable VPN Server" enabled={config.vpn.enabled} onChange={(v) => updateConfig('vpn', 'enabled', v)} />
             {config.vpn.enabled && (
                 <div className="mt-6 space-y-6 animate-fade-in">
@@ -2526,7 +3314,11 @@ key client.key`}</pre>
             </div>
         )}
 
-        <Card title="Firewall Configuration">
+        <Card title="Firewall Configuration" info={{
+            description: "The security guard for your network.",
+            usage: "Keeps hackers out. Only change 'Port Forwarding' if a game or app specifically asks you to.",
+            technical: "Manages netfilter/iptables chains (INPUT, FORWARD, OUTPUT). Port forwarding uses DNAT (Destination NAT) in the PREROUTING chain."
+        }}>
            <Toggle label="Enable SPI Firewall" enabled={config.firewall.enabled} onChange={(v) => updateConfig('firewall', 'enabled', v)} />
            <Toggle label="DoS Protection" enabled={config.firewall.ddosProtection} onChange={(v) => updateConfig('firewall', 'ddosProtection', v)} />
            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -2592,7 +3384,11 @@ key client.key`}</pre>
         <div className="space-y-6 max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* QoS Configuration */}
-                <Card title="Quality of Service (QoS) Engine">
+                <Card title="Quality of Service (QoS) Engine" info={{
+                    description: "Make sure your Zoom calls don't lag when someone else is watching Netflix.",
+                    usage: "Turn this on to give priority to Gaming or Video Calls over big downloads.",
+                    technical: "Uses SQM (Smart Queue Management) with fq_codel or cake algorithms to combat bufferbloat and ensure fair bandwidth distribution."
+                }}>
                     <Toggle 
                         label="Enable Smart QoS" 
                         subLabel="Prioritize traffic based on application and device" 
@@ -2692,7 +3488,11 @@ key client.key`}</pre>
                 </Card>
 
                 {/* Historical Analytics */}
-                <Card title="Traffic Analytics">
+                <Card title="Traffic Analytics" info={{
+                    description: "See how much data you are using.",
+                    usage: "Check if you are near your monthly data cap, or find out which device is using all the bandwidth.",
+                    technical: "Aggregates interface counters (/proc/net/dev) and connection tracking flows (conntrack) into a time-series database (RRDtool or similar) for historical reporting."
+                }}>
                     <div className="flex gap-2 mb-6">
                         {['24h', '7d', '30d'].map(p => (
                             <button 
@@ -2731,7 +3531,7 @@ key client.key`}</pre>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{client.usage} GB</div>
+                                        <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{formatBytes(client.usage * 1024 * 1024)}</div>
                                         <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full mt-1 ml-auto">
                                             <div className="h-full bg-blue-500 rounded-full" style={{ width: `${100 - (i * 20)}%` }}></div>
                                         </div>
@@ -2748,21 +3548,11 @@ key client.key`}</pre>
 
   const renderTools = () => (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <Card title="Troubleshooting Scenarios (Game Mode)">
-          <div className="grid grid-cols-1 gap-4">
-              {SCENARIOS.map(sc => (
-                  <div key={sc.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer bg-white dark:bg-slate-800" onClick={() => startScenario(sc)}>
-                      <div className="flex justify-between items-center">
-                          <h4 className="font-bold text-slate-800 dark:text-slate-200">{sc.title}</h4>
-                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Start</span>
-                      </div>
-                      <p className="text-sm text-slate-500 mt-1">{sc.description}</p>
-                  </div>
-              ))}
-          </div>
-      </Card>
-
-      <Card title="System Tools">
+      <Card title="System Tools" info={{
+          description: "Maintenance tasks for your router.",
+          usage: "Come here to update the software, change your admin password, or restart the device if it's acting weird.",
+          technical: "Interacts with the bootloader (U-Boot) environment variables, flash partitions (mtd), and system init scripts (systemd/SysVinit)."
+      }}>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
                <h4 className="font-medium text-slate-800 dark:text-slate-200">Configuration</h4>
@@ -2772,7 +3562,14 @@ key client.key`}</pre>
                    const a = document.createElement('a'); a.href = url; a.download = `backup-${config.system.hostname}.json`; a.click();
                    showToast('Configuration downloaded', 'success');
                }}>Backup Configuration</Button>
-               <Button variant="secondary" className="w-full justify-center" icon={Upload} onClick={() => showToast('Simulated: Upload Prompt', 'info')} disabled={session?.role !== ROLES.ADMIN}>Restore Configuration</Button>
+               <Button variant="secondary" className="w-full justify-center" icon={Upload} onClick={() => fileInputRef.current.click()} disabled={session?.role !== ROLES.ADMIN}>Restore Configuration</Button>
+               <input 
+                   type="file" 
+                   ref={fileInputRef} 
+                   style={{display: 'none'}} 
+                   accept=".json" 
+                   onChange={handleFileChange} 
+               />
             </div>
             <div className="space-y-4">
                <h4 className="font-medium text-slate-800 dark:text-slate-200">Operations</h4>
@@ -2780,7 +3577,11 @@ key client.key`}</pre>
                    setRebootReason('manual');
                    setRebooting(true);
                }} disabled={session?.role !== ROLES.ADMIN}>Reboot Router</Button>
-               <Button variant="danger" className="w-full justify-center" icon={AlertTriangle} onClick={() => {setConfig(DEFAULT_CONFIG); showToast('Reset to Factory Defaults', 'success'); setRebooting(true);}} disabled={session?.role !== ROLES.ADMIN}>Factory Reset</Button>
+               <Button variant="danger" className="w-full justify-center" icon={AlertTriangle} onClick={() => {
+                   setConfig(DEFAULT_CONFIG); 
+                   setRebootReason('factory_reset');
+                   setRebooting(true);
+               }} disabled={session?.role !== ROLES.ADMIN}>Factory Reset</Button>
             </div>
          </div>
       </Card>
@@ -2829,6 +3630,7 @@ key client.key`}</pre>
                     setPasswordForm({ current: '', new: '', confirm: '' });
                     
                     // Trigger Rollback/Confirm Flow before Reboot
+                    setRebootReason('password_change');
                     setPostConfirmAction('reboot');
                     setTimeout(() => handleApplyConfig(), 100);
                   }}>Update Password</Button>
@@ -2837,7 +3639,11 @@ key client.key`}</pre>
          </div>
       </Card>
 
-      <Card title="CLI Terminal">
+      <Card title="CLI Terminal" info={{
+          description: "For Experts Only: Text-based control.",
+          usage: "If you know Linux commands, you can use this. Otherwise, it's best to leave it alone.",
+          technical: "Provides a simulated shell environment. Commands are parsed and executed within the browser sandbox, mimicking a Linux-based router OS (e.g., OpenWrt)."
+      }}>
           <TerminalCLI 
               config={config} 
               updateConfig={updateConfig} 
@@ -2881,37 +3687,60 @@ key client.key`}</pre>
         setContextMenu({ x, y, type, id });
     };
 
-    const autoLayout = () => {
+    const toggleLayout = () => {
         const newNodes = { ...nodes };
-        // Router in center
-        newNodes.router = { x: 50, y: 50 };
-        newNodes.internet = { x: 50, y: 15 };
+        const onlineClients = clients.filter(c => c.status === 'online');
         
-        // Mesh Topology Layout: Distribute clients in a circle around the router
-        const radius = 35; // Distance from center
-        const clientCount = clients.length;
-        
-        clients.forEach((c, i) => {
-            const node = newNodes.clients.find(n => n.id === c.id);
-            if (node) {
-                // Distribute evenly in a circle, starting from angle that avoids the top (Internet)
-                // Internet is at -90deg (top). We start at 30deg.
-                const angle = (i / clientCount) * 2 * Math.PI + 0.5; 
-                
-                // Add some randomness for "Mesh" feel
-                const randomOffset = (Math.random() - 0.5) * 5;
-                
-                node.x = 50 + (radius + randomOffset) * Math.cos(angle);
-                node.y = 50 + (radius + randomOffset) * Math.sin(angle);
-                
-                // Clamp to bounds (5-95%)
-                node.x = Math.max(5, Math.min(95, node.x));
-                node.y = Math.max(5, Math.min(95, node.y));
-            }
-        });
+        if (layoutMode === 'linear') {
+            // Switch to Mesh (Auto Layout)
+            newNodes.router = { x: 50, y: 50 };
+            newNodes.internet = { x: 50, y: 15 };
+            
+            const radius = 30; // Slightly reduced radius to keep within bounds
+            const count = onlineClients.length;
+            
+            onlineClients.forEach((c, i) => {
+                const node = newNodes.clients.find(n => n.id === c.id);
+                if (node) {
+                    // Distribute in a semi-circle below the router (0 to PI) to avoid ISP overlap
+                    // 0 is Right, PI is Left.
+                    let angle;
+                    if (count === 1) {
+                        angle = Math.PI / 2; // Bottom center
+                    } else {
+                        // Spread from 20 degrees to 160 degrees
+                        const startAngle = 0.1 * Math.PI;
+                        const endAngle = 0.9 * Math.PI;
+                        angle = startAngle + (i / (count - 1)) * (endAngle - startAngle);
+                    }
+                    
+                    node.x = 50 + radius * Math.cos(angle);
+                    node.y = 50 + radius * Math.sin(angle);
+                    
+                    // Clamp
+                    node.x = Math.max(5, Math.min(95, node.x));
+                    node.y = Math.max(5, Math.min(95, node.y));
+                }
+            });
+            setLayoutMode('mesh');
+            showToast('Mesh Topology Applied', 'success');
+        } else {
+            // Switch back to Linear (Default)
+            newNodes.router = { x: 50, y: 45 };
+            newNodes.internet = { x: 50, y: 15 };
+            
+            onlineClients.forEach((c, i) => {
+                const node = newNodes.clients.find(n => n.id === c.id);
+                if (node) {
+                    node.x = (i + 1) * (100 / (onlineClients.length + 1));
+                    node.y = 80;
+                }
+            });
+            setLayoutMode('linear');
+            showToast('Linear Layout Restored', 'success');
+        }
         
         setNodes(newNodes);
-        showToast('Mesh Topology Layout applied', 'success');
     };
 
     const renderNodeDetail = () => {
@@ -3000,7 +3829,7 @@ key client.key`}</pre>
             noPadding
         >
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-              <Button variant="secondary" className="h-8 text-xs shadow-sm bg-white/90 dark:bg-slate-800/90 backdrop-blur" icon={Layers} onClick={autoLayout}>Auto Layout</Button>
+              <Button variant="secondary" className="h-8 text-xs shadow-sm bg-white/90 dark:bg-slate-800/90 backdrop-blur" icon={Layers} onClick={toggleLayout}>{layoutMode === 'linear' ? 'Auto Layout' : 'Reset Layout'}</Button>
           </div>
 
           <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 z-10 text-xs space-y-2">
@@ -3012,7 +3841,7 @@ key client.key`}</pre>
              <div className="mt-2 text-[10px] text-slate-400 border-t border-slate-100 dark:border-slate-700 pt-2">Right-click nodes for actions</div>
           </div>
           
-          <div className="relative w-full h-full min-h-[600px]" ref={mapRef}>
+          <div className="relative w-full h-full min-h-[600px]" ref={mapRef} onMouseMove={handleMouseMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}>
              {/* Render Detail Popover */}
              {renderNodeDetail()}
 
@@ -3150,6 +3979,7 @@ key client.key`}</pre>
                 onMouseEnter={() => setHoveredNode({ type: 'internet' })}
                 onMouseLeave={() => setHoveredNode(null)}
                 onContextMenu={(e) => handleContextMenu(e, 'internet')}
+                onMouseDown={(e) => { e.stopPropagation(); handleDragStart('internet'); }}
              >
                 <div className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 group-hover:border-blue-500 transition-colors">
                     <Cloud className="w-8 h-8 text-blue-500" />
@@ -3167,6 +3997,7 @@ key client.key`}</pre>
                 onMouseEnter={() => setHoveredNode({ type: 'router' })}
                 onMouseLeave={() => setHoveredNode(null)}
                 onContextMenu={(e) => handleContextMenu(e, 'router')}
+                onMouseDown={(e) => { e.stopPropagation(); handleDragStart('router'); }}
              >
                 <div className="relative p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 group-hover:border-indigo-500 transition-colors">
                    <div className="absolute -top-1 left-4 w-1 h-3 bg-slate-300 dark:bg-slate-600 rounded-t"></div>
@@ -3194,6 +4025,7 @@ key client.key`}</pre>
                         onMouseEnter={() => setHoveredNode({ type: 'clients', id: node.id })}
                         onMouseLeave={() => setHoveredNode(null)}
                         onContextMenu={(e) => handleContextMenu(e, 'clients', node.id)}
+                        onMouseDown={(e) => { e.stopPropagation(); handleDragStart('clients', node.id); }}
                      >
                         <div className={`relative p-2.5 rounded-xl shadow-md border transition-all duration-300 ${
                             client.blocked 
@@ -3238,20 +4070,6 @@ key client.key`}</pre>
       </div>
     );
   };
-
-  const SidebarItem = ({ id, label, icon: Icon }) => (
-    <button 
-        onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }} 
-        className={`group w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all rounded-lg mb-1 ${
-            activeTab === id 
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-        }`}
-    >
-      <Icon className={`h-5 w-5 transition-colors ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
-      {label}
-    </button>
-  );
 
   if (rebooting) return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
@@ -3332,9 +4150,16 @@ key client.key`}</pre>
                   <button 
                     type="button"
                     onClick={() => setShowResetModal(true)}
-                    className="mt-4 text-red-400 hover:text-red-500 underline"
+                    className="mt-4 text-red-400 hover:text-red-500 underline block mx-auto"
                   >
-                    Reset App Data
+                    Reset Password
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setShowFeedbackModal(true)}
+                    className="mt-2 text-slate-400 hover:text-blue-500 text-[10px] flex items-center justify-center gap-1 mx-auto"
+                  >
+                    <ExternalLink size={10} /> Report an issue / Feedback
                   </button>
                </div>
             </div>
@@ -3379,6 +4204,31 @@ key client.key`}</pre>
                 </div>
             </div>
          )}
+
+         {/* Feedback Modal */}
+         {showFeedbackModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl h-[80vh] overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col">
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+                        <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <ExternalLink size={16} className="text-blue-500"/>
+                            Report Issue / Feedback
+                        </h3>
+                        <button onClick={() => setShowFeedbackModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="flex-1 bg-white relative">
+                        <iframe 
+                            src="https://adityaraj3136.github.io/contact/" 
+                            className="w-full h-full border-0"
+                            title="Feedback Form"
+                            sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+                        />
+                    </div>
+                </div>
+            </div>
+         )}
          </div>
       </div>
     );
@@ -3391,18 +4241,19 @@ key client.key`}</pre>
       <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 md:relative md:translate-x-0 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex-shrink-0"><Globe className="h-6 w-6 text-blue-600 mr-2" /><span className="text-xl font-bold text-slate-800 dark:text-white">NetAdmin<span className="text-blue-600">Pro</span></span></div>
         <nav className="mt-6 flex flex-col gap-1 overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-          <SidebarItem id="dashboard" label="Dashboard" icon={Activity} />
-          <SidebarItem id="topology" label="Topology Map" icon={Share2} />
-          <SidebarItem id="diagnostics" label="Diagnostics" icon={Gauge} />
-          <SidebarItem id="logs" label="System Logs" icon={ClipboardList} />
-          <SidebarItem id="network" label="Network" icon={Globe} />
-          <SidebarItem id="wireless" label="Wireless" icon={Wifi} />
-          <SidebarItem id="clients" label="Clients" icon={Smartphone} />
-          <SidebarItem id="qos" label="Traffic & QoS" icon={BarChart2} />
-          <SidebarItem id="storage" label="USB Storage" icon={HardDrive} />
-          <SidebarItem id="vpn" label="VPN Server" icon={Lock} />
-          <SidebarItem id="security" label="Firewall" icon={Shield} />
-          <SidebarItem id="tools" label="System Tools" icon={Settings} />
+          <SidebarItem id="dashboard" label="Dashboard" icon={Activity} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="topology" label="Topology Map" icon={Share2} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="terminal" label="Terminal CLI" icon={Terminal} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="diagnostics" label="Diagnostics" icon={Gauge} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="logs" label="System Logs" icon={ClipboardList} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="network" label="Network" icon={Globe} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="wireless" label="Wireless" icon={Wifi} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="clients" label="Clients" icon={Smartphone} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="qos" label="Traffic & QoS" icon={BarChart2} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="storage" label="USB Storage" icon={HardDrive} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="vpn" label="VPN Server" icon={Lock} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="security" label="Firewall" icon={Shield} activeTab={activeTab} onClick={handleTabChange} />
+          <SidebarItem id="tools" label="System Tools" icon={Settings} activeTab={activeTab} onClick={handleTabChange} />
         </nav>
       </aside>
 
@@ -3413,8 +4264,6 @@ key client.key`}</pre>
              <Server size={16} className="text-slate-400"/> {config.system.hostname} <span className="text-slate-300">/</span> {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
           </div>
           <div className="flex items-center gap-4">
-             {activeScenario && <div className="hidden md:flex items-center gap-2 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse"><AlertOctagon className="w-3 h-3" /> TROUBLESHOOTING ACTIVE</div>}
-             
              {/* Notification Center */}
              <div className="relative">
                 <button 
@@ -3513,9 +4362,10 @@ key client.key`}</pre>
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-950">
+        <div ref={mainContentRef} className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-950 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
            {activeTab === 'dashboard' && renderDashboard()}
            {activeTab === 'topology' && renderTopology()}
+           {activeTab === 'terminal' && renderTerminal()}
            {activeTab === 'diagnostics' && renderDiagnostics()}
            {activeTab === 'logs' && renderLogs()}
            {activeTab === 'network' && renderNetwork()}
