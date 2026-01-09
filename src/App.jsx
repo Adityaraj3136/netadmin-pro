@@ -645,7 +645,7 @@ export default function App() {
   const [showWifiPassword, setShowWifiPassword] = useState(false);
   const [showGuestWifiPassword, setShowGuestWifiPassword] = useState(false);
   
-  const fileInputRef = useRef(null);
+    const storageFileInputRef = useRef(null);
 
   // Terminal State
   const [terminalHistory, setTerminalHistory] = useState([
@@ -838,6 +838,8 @@ export default function App() {
   const [previewFile, setPreviewFile] = useState(null); // { name, type, url }
   const [audioPlayerState, setAudioPlayerState] = useState({ playing: false, currentTime: 0, duration: 0, volume: 1 });
   const audioRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const supportsFSA = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
   const [currentDirHandle, setCurrentDirHandle] = useState(null);
   const [dirHistory, setDirHistory] = useState([]); // Stack of { handle, name }
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
@@ -2982,7 +2984,7 @@ export default function App() {
       try {
           // Check if API is supported
           if (!window.showDirectoryPicker) {
-              showToast('File System Access API not supported in this browser', 'danger');
+              showToast('File System Access API not supported in this browser. Use Select Files instead.', 'info');
               return;
           }
 
@@ -3009,6 +3011,41 @@ export default function App() {
               showToast('Failed to mount local drive', 'danger');
           }
       }
+  };
+
+  // Fallback: file picker for browsers without File System Access API (mobile)
+  const handleOpenFilePicker = () => {
+      if (storageFileInputRef.current) {
+          storageFileInputRef.current.click();
+      }
+  };
+
+  const handleUploadChange = (e) => {
+      const list = e.target.files;
+      if (!list || list.length === 0) return;
+      const files = Array.from(list).map(file => ({
+          name: file.name,
+          type: 'file',
+          size: file.size,
+          date: new Date(file.lastModified).toISOString().split('T')[0],
+          fileObj: file,
+          handle: null
+      }));
+      setStorageFiles(prev => {
+          const next = [...prev.filter(f => f.type === 'folder' ? true : true), ...files];
+          return next;
+      });
+      setIsLocalMount(true);
+      setConfig(prev => ({
+          ...prev,
+          storage: {
+              ...prev.storage,
+              name: 'Local Files (Selected)',
+              used: Math.min(prev.storage.total, (prev.storage.used || 0) + files.reduce((acc, f) => acc + f.size, 0)),
+              total: prev.storage.total
+          }
+      }));
+      showToast(`Added ${files.length} file(s)`, 'success');
   };
 
   const handleNavigateUp = async () => {
@@ -3168,9 +3205,19 @@ export default function App() {
                           </button>
                       )}
                   </div>
-                  <Button variant="secondary" className="h-8 text-xs" icon={HardDrive} onClick={handleMountLocalDrive}>
-                      {isLocalMount ? 'Unmount / Reset' : 'Mount Local Drive'}
-                  </Button>
+                  {isLocalMount ? (
+                      <Button variant="secondary" className="h-8 text-xs" icon={HardDrive} onClick={handleMountLocalDrive}>
+                          Unmount / Reset
+                      </Button>
+                  ) : supportsFSA ? (
+                      <Button variant="secondary" className="h-8 text-xs" icon={HardDrive} onClick={handleMountLocalDrive}>
+                          Mount Local Drive
+                      </Button>
+                  ) : (
+                      <Button variant="secondary" className="h-8 text-xs" icon={Plus} onClick={handleOpenFilePicker}>
+                          Select Files
+                      </Button>
+                  )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative min-h-[200px]">
                  {isLoadingFiles && (
@@ -3196,12 +3243,25 @@ export default function App() {
                        <div className="text-xs text-slate-400 mt-1 text-center">{file.type === 'folder' ? '-' : formatBytes(file.size)}</div>
                     </div>
                  ))}
-                 <div className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 cursor-pointer">
-                    <Plus size={24} />
-                    <span className="text-xs mt-2">Upload</span>
-                 </div>
+                      <div
+                          onClick={supportsFSA ? undefined : handleOpenFilePicker}
+                          className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 cursor-pointer"
+                      >
+                          <Plus size={24} />
+                          <span className="text-xs mt-2">{supportsFSA ? 'Browse' : 'Select Files'}</span>
+                      </div>
               </div>
            </div>
+
+              {/* Hidden file input for mobile/unsupported browsers */}
+              <input
+                  ref={storageFileInputRef}
+                  type="file"
+                  multiple
+                  accept="audio/*,image/*,video/*"
+                  className="hidden"
+                  onChange={handleUploadChange}
+              />
            
            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-center gap-2 text-xs text-slate-400">
                <Shield size={12} className="text-green-500" />
