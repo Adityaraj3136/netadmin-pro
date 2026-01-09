@@ -3230,7 +3230,7 @@ export default function App() {
                         )}
                         {previewFile.type === 'audio' && (
                                 console.log('🎵 Rendering custom audio player for:', previewFile.name),
-                            <div className="flex flex-col items-center justify-center w-full max-w-md p-8 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-2xl">
+                            <div className="custom-audio-player flex flex-col items-center justify-center w-full max-w-md p-8 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-2xl">
                                 <div className="relative mb-8">
                                     <div className="absolute inset-0 bg-blue-500 blur-xl opacity-10 rounded-full animate-pulse"></div>
                                     <div className="relative w-40 h-40 bg-gradient-to-br from-blue-50 dark:from-slate-700 to-blue-100 dark:to-slate-800 rounded-full flex items-center justify-center border border-blue-200 dark:border-slate-600 shadow-inner">
@@ -3283,8 +3283,8 @@ export default function App() {
                                             className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                                         />
                                         <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-mono">
-                                            <span>{Math.floor(audioPlayerState.currentTime / 60)}:{String(Math.floor(audioPlayerState.currentTime % 60)).padStart(2, '0')}</span>
-                                            <span>{Math.floor(audioPlayerState.duration / 60)}:{String(Math.floor(audioPlayerState.duration % 60)).padStart(2, '0')}</span>
+                                            <span className="time-label">{Math.floor(audioPlayerState.currentTime / 60)}:{String(Math.floor(audioPlayerState.currentTime % 60)).padStart(2, '0')}</span>
+                                            <span className="time-label">{Math.floor(audioPlayerState.duration / 60)}:{String(Math.floor(audioPlayerState.duration % 60)).padStart(2, '0')}</span>
                                         </div>
                                     </div>
 
@@ -3319,7 +3319,7 @@ export default function App() {
                                                     }
                                                 }
                                             }}
-                                            className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all transform hover:scale-105"
+                                            className="control-button flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all transform hover:scale-105"
                                         >
                                             {audioPlayerState.playing ? <Pause size={24} /> : <Play size={24} className="ml-0.5" />}
                                         </button>
@@ -3331,7 +3331,7 @@ export default function App() {
                                                 setAudioPlayerState(p => ({ ...p, volume: newVol }));
                                                 if (audioRef.current) audioRef.current.volume = newVol;
                                             }}
-                                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+                                            className="control-button p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
                                         >
                                             {audioPlayerState.volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
                                         </button>
