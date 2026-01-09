@@ -1999,54 +1999,54 @@ export default function App() {
       <div className="lg:col-span-8 flex flex-col gap-6">
           {/* Top Row: Hero Status Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <div className="bg-[#4ACBD6] rounded-sm p-6 text-white shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[200px]">
-                <div className="absolute right-0 top-0 opacity-20 transform translate-x-4 -translate-y-4"><Globe size={120} /></div>
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+                <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4"><Globe size={120} /></div>
                 <div className="relative z-10">
-                    <p className="text-white/80 text-sm font-bold mb-1 uppercase tracking-wider">Internet Status</p>
-                    <h3 className="text-2xl xl:text-3xl font-bold flex items-center gap-2"><CheckCircle className="h-6 w-6 text-white" /> Connected</h3>
+                    <p className="text-blue-100 text-sm font-medium mb-1">Internet Status</p>
+                    <h3 className="text-2xl xl:text-3xl font-bold flex items-center gap-2"><CheckCircle className="h-6 w-6 text-green-400" /> Connected</h3>
                 </div>
                 <div className="relative z-10 mt-4">
-                    <div className="flex flex-col gap-2 text-xs font-mono bg-white/10 p-3 rounded-sm w-full border border-white/20">
-                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
-                          <span className="opacity-70 uppercase">Type</span> 
-                          <span className="uppercase font-bold">{config.wan.type === 'dhcp' ? 'Dynamic IP (DHCP)' : config.wan.type === 'static' ? 'Static IP' : config.wan.type === 'pppoe' ? 'PPPoE' : config.wan.type}</span>
+                    <div className="flex flex-col gap-2 text-xs font-mono bg-black/20 p-3 rounded-lg w-full">
+                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
+                          <span className="opacity-50 uppercase">Type</span> 
+                          <span>{config.wan.type === 'dhcp' ? 'Dynamic IP (DHCP)' : config.wan.type === 'static' ? 'Static IP' : config.wan.type === 'pppoe' ? 'PPPoE' : config.wan.type}</span>
                       </div>
-                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
-                          <span className="opacity-70 uppercase">WAN IP</span> 
-                          <span className="font-bold">{config.operationMode === 'ap' ? config.lan.ip : config.wan.ip}</span>
+                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
+                          <span className="opacity-50 uppercase">WAN IP</span> 
+                          <span>{config.operationMode === 'ap' ? config.lan.ip : config.wan.ip}</span>
                       </div>
-                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
-                          <span className="opacity-70 uppercase">Gateway</span> 
-                          <span className="font-bold">{config.operationMode === 'ap' ? config.lan.gateway : config.wan.gateway}</span>
+                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
+                          <span className="opacity-50 uppercase">Gateway</span> 
+                          <span>{config.operationMode === 'ap' ? config.lan.gateway : config.wan.gateway}</span>
                       </div>
                       <div className="flex justify-between">
-                          <span className="opacity-70 uppercase">DNS</span> 
-                          <span className="font-bold">{config.wan.type === 'static' && config.wan.dns === 'auto' ? '8.8.8.8' : (config.wan.dns === 'auto' ? 'Auto (ISP)' : config.wan.dns)}</span>
+                          <span className="opacity-50 uppercase">DNS</span> 
+                          <span>{config.wan.type === 'static' && config.wan.dns === 'auto' ? '8.8.8.8' : (config.wan.dns === 'auto' ? 'Auto (ISP)' : config.wan.dns)}</span>
                       </div>
                     </div>
                 </div>
               </div>
 
-              <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-800 rounded-sm p-6 shadow-sm border border-[#ACD1E9] dark:border-slate-700 flex flex-col justify-between">
+              <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-2">
                     <div className="w-full">
-                      <p className="text-[#3679C8] dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Real-time Throughput</p>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Real-time Throughput</p>
                       <div className="grid grid-cols-2 gap-4 mt-3">
                           <div>
                               <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2 h-2 rounded-full bg-[#6BCB77] animate-pulse"></div>
-                                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Download</span>
+                                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Download</span>
                               </div>
-                              <div className="text-2xl xl:text-3xl font-bold text-[#333] dark:text-white tabular-nums tracking-tight">
+                              <div className="text-2xl xl:text-3xl font-bold dark:text-white tabular-nums tracking-tight">
                                   {formatBytes(trafficHistory[trafficHistory.length-1].down * 1024 * 1024 / 8)}/s
                               </div>
                           </div>
                           <div>
                               <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2 h-2 rounded-full bg-[#4ACBD6] animate-pulse"></div>
-                                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Upload</span>
+                                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Upload</span>
                               </div>
-                              <div className="text-2xl xl:text-3xl font-bold text-[#333] dark:text-white tabular-nums tracking-tight">
+                              <div className="text-2xl xl:text-3xl font-bold dark:text-white tabular-nums tracking-tight">
                                   {formatBytes(trafficHistory[trafficHistory.length-1].up * 1024 * 1024 / 8)}/s
                               </div>
                           </div>
