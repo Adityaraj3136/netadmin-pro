@@ -170,9 +170,9 @@ const DEFAULT_USERS = [
 const Card = ({ title, children, className = "", actions, noPadding = false, info }) => {
   const [showInfo, setShowInfo] = useState(false);
 
-  return (
-    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden ${className} relative`}>
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-100 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm">
+    return (
+        <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden ${className} relative`}>
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-100 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm">
         <div className="flex items-center gap-2">
             {title}
             {info && (
@@ -226,12 +226,12 @@ const Card = ({ title, children, className = "", actions, noPadding = false, inf
 const Toggle = ({ enabled, onChange, label, subLabel }) => (
   <div className="flex items-center justify-between py-3">
     <div>
-       <span className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+    <span className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
        {subLabel && <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subLabel}</span>}
     </div>
     <button
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
     >
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
@@ -247,10 +247,10 @@ const Input = ({ label, value, onChange, type = "text", error, disabled, placeho
       onChange={onChange}
       disabled={disabled}
       placeholder={placeholder}
-      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white transition-colors
-        ${error ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}
-        ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''}
-      `}
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white transition-colors
+                ${error ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}
+                ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''}
+            `}
     />
     {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
   </div>
@@ -262,7 +262,7 @@ const Select = ({ label, value, onChange, options }) => (
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white"
+    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white"
     >
       {options.map(opt => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -272,13 +272,13 @@ const Select = ({ label, value, onChange, options }) => (
 );
 
 const Button = ({ children, onClick, variant = 'primary', icon: Icon, disabled, className="" }) => {
-  const base = "inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed";
-  const variants = {
-    primary: "border-transparent text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500",
-    danger: "border-transparent text-white bg-red-600 hover:bg-red-700 focus:ring-red-500",
-    secondary: "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700",
-    success: "border-transparent text-white bg-green-600 hover:bg-green-700 focus:ring-green-500"
-  };
+    const base = "inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed";
+    const variants = {
+        primary: "border-transparent text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500",
+        danger: "border-transparent text-white bg-red-600 hover:bg-red-700 focus:ring-red-500",
+        secondary: "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700",
+        success: "border-transparent text-white bg-green-600 hover:bg-green-700 focus:ring-green-500"
+    };
 
   return (
     <button onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${className}`}>
@@ -572,17 +572,17 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role,
 // --- MAIN APP ---
 
 const SidebarItem = ({ id, label, icon: Icon, activeTab, onClick }) => (
-  <button 
-      onClick={() => onClick(id)} 
-      className={`group w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all rounded-lg mb-1 ${
-          activeTab === id 
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-      }`}
-  >
-    <Icon className={`h-5 w-5 transition-colors ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
-    {label}
-  </button>
+    <button
+            onClick={() => onClick(id)}
+            className={`group w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all rounded-lg mb-1 ${
+                    activeTab === id
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+    >
+        <Icon className={`h-5 w-5 transition-colors ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
+        {label}
+    </button>
 );
 
 export default function App() {
@@ -1999,54 +1999,54 @@ export default function App() {
       <div className="lg:col-span-8 flex flex-col gap-6">
           {/* Top Row: Hero Status Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[200px]">
-                <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4"><Globe size={120} /></div>
+              <div className="bg-[#4ACBD6] rounded-sm p-6 text-white shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+                <div className="absolute right-0 top-0 opacity-20 transform translate-x-4 -translate-y-4"><Globe size={120} /></div>
                 <div className="relative z-10">
-                    <p className="text-blue-100 text-sm font-medium mb-1">Internet Status</p>
-                    <h3 className="text-2xl xl:text-3xl font-bold flex items-center gap-2"><CheckCircle className="h-6 w-6 text-green-400" /> Connected</h3>
+                    <p className="text-white/80 text-sm font-bold mb-1 uppercase tracking-wider">Internet Status</p>
+                    <h3 className="text-2xl xl:text-3xl font-bold flex items-center gap-2"><CheckCircle className="h-6 w-6 text-white" /> Connected</h3>
                 </div>
                 <div className="relative z-10 mt-4">
-                    <div className="flex flex-col gap-2 text-xs font-mono bg-black/20 p-3 rounded-lg w-full">
-                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
-                          <span className="opacity-50 uppercase">Type</span> 
-                          <span className="uppercase">{config.wan.type === 'dhcp' ? 'Dynamic IP (DHCP)' : config.wan.type === 'static' ? 'Static IP' : config.wan.type === 'pppoe' ? 'PPPoE' : config.wan.type}</span>
+                    <div className="flex flex-col gap-2 text-xs font-mono bg-white/10 p-3 rounded-sm w-full border border-white/20">
+                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
+                          <span className="opacity-70 uppercase">Type</span> 
+                          <span className="uppercase font-bold">{config.wan.type === 'dhcp' ? 'Dynamic IP (DHCP)' : config.wan.type === 'static' ? 'Static IP' : config.wan.type === 'pppoe' ? 'PPPoE' : config.wan.type}</span>
                       </div>
-                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
-                          <span className="opacity-50 uppercase">WAN IP</span> 
-                          <span>{config.operationMode === 'ap' ? config.lan.ip : config.wan.ip}</span>
+                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
+                          <span className="opacity-70 uppercase">WAN IP</span> 
+                          <span className="font-bold">{config.operationMode === 'ap' ? config.lan.ip : config.wan.ip}</span>
                       </div>
-                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
-                          <span className="opacity-50 uppercase">Gateway</span> 
-                          <span>{config.operationMode === 'ap' ? config.lan.gateway : config.wan.gateway}</span>
+                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
+                          <span className="opacity-70 uppercase">Gateway</span> 
+                          <span className="font-bold">{config.operationMode === 'ap' ? config.lan.gateway : config.wan.gateway}</span>
                       </div>
                       <div className="flex justify-between">
-                          <span className="opacity-50 uppercase">DNS</span> 
-                          <span>{config.wan.type === 'static' && config.wan.dns === 'auto' ? '8.8.8.8' : (config.wan.dns === 'auto' ? 'Auto (ISP)' : config.wan.dns)}</span>
+                          <span className="opacity-70 uppercase">DNS</span> 
+                          <span className="font-bold">{config.wan.type === 'static' && config.wan.dns === 'auto' ? '8.8.8.8' : (config.wan.dns === 'auto' ? 'Auto (ISP)' : config.wan.dns)}</span>
                       </div>
                     </div>
                 </div>
               </div>
 
-              <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+              <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-800 rounded-sm p-6 shadow-sm border border-[#ACD1E9] dark:border-slate-700 flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-2">
                     <div className="w-full">
-                      <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Real-time Throughput</p>
+                      <p className="text-[#3679C8] dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Real-time Throughput</p>
                       <div className="grid grid-cols-2 gap-4 mt-3">
                           <div>
                               <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Download</span>
+                                  <div className="w-2 h-2 rounded-full bg-[#6BCB77] animate-pulse"></div>
+                                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Download</span>
                               </div>
-                              <div className="text-2xl xl:text-3xl font-bold dark:text-white tabular-nums tracking-tight">
+                              <div className="text-2xl xl:text-3xl font-bold text-[#333] dark:text-white tabular-nums tracking-tight">
                                   {formatBytes(trafficHistory[trafficHistory.length-1].down * 1024 * 1024 / 8)}/s
                               </div>
                           </div>
                           <div>
                               <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Upload</span>
+                                  <div className="w-2 h-2 rounded-full bg-[#4ACBD6] animate-pulse"></div>
+                                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Upload</span>
                               </div>
-                              <div className="text-2xl xl:text-3xl font-bold dark:text-white tabular-nums tracking-tight">
+                              <div className="text-2xl xl:text-3xl font-bold text-[#333] dark:text-white tabular-nums tracking-tight">
                                   {formatBytes(trafficHistory[trafficHistory.length-1].up * 1024 * 1024 / 8)}/s
                               </div>
                           </div>
@@ -3160,13 +3160,12 @@ export default function App() {
                  </div>
               </div>
            </div>
+           
+           <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-center gap-2 text-xs text-slate-400">
+               <Shield size={12} className="text-green-500" />
+               <span>Your privacy is important. All file operations are performed locally on your device. No data is uploaded to any server.</span>
+           </div>
         </Card>
-
-                {/* Privacy note (restored functionality, old theme styling) */}
-                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <Shield size={12} className="text-green-500" />
-                    <span>Your privacy is important. All file operations are performed locally on your device. No data is uploaded to any server.</span>
-                </div>
 
         {/* File Preview Modal */}
         {previewFile && (
@@ -3195,7 +3194,7 @@ export default function App() {
                                         <Music size={64} className="text-blue-500" />
                                     </div>
                                 </div>
-
+                                
                                 <div className="text-center mb-8 w-full">
                                     <h4 className="text-lg font-bold text-white mb-1 truncate px-4">{previewFile.name}</h4>
                                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
@@ -3802,8 +3801,8 @@ key client.key`}</pre>
         };
 
         return (
-            <div className="absolute z-50 w-64 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 text-left pointer-events-none animate-fade-in-up" style={style}>
-                <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-slate-700 pb-2">
+            <div className="absolute z-50 w-64 bg-white dark:bg-slate-800 p-4 rounded-sm shadow-xl border border-[#ACD1E9] dark:border-slate-700 text-left pointer-events-none animate-fade-in-up" style={style}>
+                <h4 className="font-bold text-[#3679C8] dark:text-white flex items-center gap-2 mb-3 border-b border-[#ACD1E9] dark:border-slate-700 pb-2">
                     {icon} {title}
                 </h4>
                 <div className="space-y-2 text-xs">
@@ -3821,7 +3820,7 @@ key client.key`}</pre>
                             <div className="flex justify-between"><span className="text-slate-500">Uptime</span> <span className="text-slate-700 dark:text-slate-300">{Math.floor(uptime / 3600)}h {(uptime % 60)}s</span></div>
                             <div className="flex justify-between"><span className="text-slate-500">Firmware</span> <span className="text-slate-700 dark:text-slate-300">{detailData.firmware}</span></div>
                             <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 mt-1">
-                                <div className="bg-indigo-500 h-1.5 rounded-full" style={{width: `${detailData.cpuLoad}%`}}></div>
+                                <div className="bg-[#4ACBD6] h-1.5 rounded-full" style={{width: `${detailData.cpuLoad}%`}}></div>
                             </div>
                             <div className="text-[10px] text-right text-slate-400">CPU Load</div>
                         </>
@@ -3830,15 +3829,15 @@ key client.key`}</pre>
                         <>
                             <div className="flex justify-between"><span className="text-slate-500">IP Address</span> <span className="font-mono text-slate-700 dark:text-slate-300">{detailData.ip}</span></div>
                             <div className="flex justify-between"><span className="text-slate-500">MAC</span> <span className="font-mono text-slate-700 dark:text-slate-300">{detailData.mac}</span></div>
-                            <div className="flex justify-between"><span className="text-slate-500">Status</span> <span className={detailData.status === 'online' ? 'text-green-500' : 'text-slate-400'}>{detailData.status}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">Status</span> <span className={detailData.status === 'online' ? 'text-[#6BCB77]' : 'text-slate-400'}>{detailData.status}</span></div>
                             {detailData.status === 'online' && !detailData.blocked && (
-                                <div className="flex justify-between"><span className="text-slate-500">Usage</span> <span className="text-blue-500">{detailData.usage || Math.floor(Math.random()*20)} Mbps</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Usage</span> <span className="text-[#3679C8]">{detailData.usage || Math.floor(Math.random()*20)} Mbps</span></div>
                             )}
                         </>
                     )}
                 </div>
                 {/* Little triangle pointer */}
-                <div className="absolute left-1/2 bottom-0 w-3 h-3 bg-white dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 transform translate-y-1/2 -translate-x-1/2 rotate-45"></div>
+                <div className="absolute left-1/2 bottom-0 w-3 h-3 bg-white dark:bg-slate-800 border-b border-r border-[#ACD1E9] dark:border-slate-700 transform translate-y-1/2 -translate-x-1/2 rotate-45"></div>
             </div>
         );
     };
@@ -3847,7 +3846,7 @@ key client.key`}</pre>
       <div className="max-w-6xl mx-auto h-full flex flex-col" onClick={() => setContextMenu(null)}>
         <Card 
             title="Interactive Topology Map" 
-            className="flex-1 min-h-[600px] relative overflow-hidden bg-slate-100 dark:bg-slate-900/50" 
+            className="flex-1 min-h-[600px] relative overflow-hidden bg-[#F4F5F7] dark:bg-slate-900/50" 
             noPadding
         >
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
@@ -4256,12 +4255,12 @@ key client.key`}</pre>
     );
   }
 
-  return (
-    <div className={`min-h-screen flex ${darkMode ? 'dark bg-slate-900' : 'bg-slate-100'}`}>
+    return (
+        <div className={`min-h-screen flex ${darkMode ? 'dark bg-slate-900' : 'bg-slate-100'}`}>
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded shadow-lg text-white text-sm font-medium animate-bounce-in ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'danger' ? 'bg-red-600' : 'bg-blue-600'}`}>{toast.message}</div>}
 
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 md:relative md:translate-x-0 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex-shrink-0"><Globe className="h-6 w-6 text-blue-600 mr-2" /><span className="text-xl font-bold text-slate-800 dark:text-white">NetAdmin<span className="text-blue-600">Pro</span></span></div>
+            <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 md:relative md:translate-x-0 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex-shrink-0"><Globe className="h-6 w-6 text-blue-600 mr-2" /><span className="text-xl font-bold text-slate-800 dark:text-white">NetAdmin<span className="text-blue-600">Pro</span></span></div>
         <nav className="mt-6 flex flex-col gap-1 overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
           <SidebarItem id="dashboard" label="Dashboard" icon={Activity} activeTab={activeTab} onClick={handleTabChange} />
           <SidebarItem id="topology" label="Topology Map" icon={Share2} activeTab={activeTab} onClick={handleTabChange} />
@@ -4282,8 +4281,8 @@ key client.key`}</pre>
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" onClick={() => {if(showUserMenu) setShowUserMenu(false)}}>
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 shadow-sm z-20">
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden text-slate-500">{isMobileMenuOpen ? <X /> : <Menu />}</button>
-          <div className="flex-1 px-4 text-slate-800 dark:text-slate-200 font-medium truncate flex items-center gap-2">
-             <Server size={16} className="text-slate-400"/> {config.system.hostname} <span className="text-slate-300">/</span> {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+             <div className="flex-1 px-4 text-slate-800 dark:text-slate-200 font-medium truncate flex items-center gap-2">
+                 <Server size={16} className="text-slate-400"/> {config.system.hostname} <span className="text-slate-300">/</span> {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
           </div>
           <div className="flex items-center gap-4">
              {/* Notification Center */}
@@ -4347,9 +4346,9 @@ key client.key`}</pre>
                         setShowUserMenu(!showUserMenu);
                     }}
                  >
-                    <div className="text-right hidden sm:block">
-                       <div className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 transition-colors">{session?.user ? session.user.charAt(0).toUpperCase() + session.user.slice(1) : 'User'}</div>
-                       <div className="text-[10px] text-green-500">Logged In</div>
+                          <div className="text-right hidden sm:block">
+                              <div className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 transition-colors">{session?.user ? session.user.charAt(0).toUpperCase() + session.user.slice(1) : 'User'}</div>
+                              <div className="text-[10px] text-green-500">Logged In</div>
                     </div>
                     <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-xs shadow-inner ring-2 ring-transparent group-hover:ring-blue-100 transition-all">
                         {session?.user ? session.user.substring(0, 2).toUpperCase() : 'US'}
