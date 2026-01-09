@@ -3075,6 +3075,7 @@ export default function App() {
           }
           
           if (previewType) {
+              console.log('🎵 Setting preview file:', { name: file.name, type: previewType, url: url.substring(0, 50) + '...', mimeType });
               setPreviewFile({ name: file.name, type: previewType, url, index });
           } else {
               showToast(`Preview not available for this file type`, 'warning');
@@ -3096,6 +3097,7 @@ export default function App() {
           }
           
           if (previewType && mockUrl) {
+              console.log('🎵 Setting mock preview file:', { name: file.name, type: previewType });
               setPreviewFile({ name: file.name, type: previewType, url: mockUrl, index });
           } else if (previewType && !mockUrl) {
               showToast(`Preview available but no mock file provided`, 'info');
@@ -3227,6 +3229,7 @@ export default function App() {
                             <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-[70vh] object-contain" />
                         )}
                         {previewFile.type === 'audio' && (
+                                console.log('🎵 Rendering custom audio player for:', previewFile.name),
                             <div className="flex flex-col items-center justify-center w-full max-w-md p-8 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-2xl">
                                 <div className="relative mb-8">
                                     <div className="absolute inset-0 bg-blue-500 blur-xl opacity-10 rounded-full animate-pulse"></div>
