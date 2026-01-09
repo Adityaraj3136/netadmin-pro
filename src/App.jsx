@@ -3162,6 +3162,12 @@ export default function App() {
            </div>
         </Card>
 
+                {/* Privacy note (restored functionality, old theme styling) */}
+                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <Shield size={12} className="text-green-500" />
+                    <span>Your privacy is important. All file operations are performed locally on your device. No data is uploaded to any server.</span>
+                </div>
+
         {/* File Preview Modal */}
         {previewFile && (
             <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-fade-in" onClick={() => setPreviewFile(null)}>
