@@ -3188,7 +3188,23 @@ export default function App() {
                             <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-[70vh] object-contain" />
                         )}
                         {previewFile.type === 'audio' && (
-                            <audio controls autoPlay src={previewFile.url} className="w-full max-w-md" />
+                            <div className="flex flex-col items-center justify-center w-full max-w-md p-8 bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-2xl">
+                                <div className="relative mb-8">
+                                    <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
+                                    <div className="relative w-40 h-40 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center border border-slate-700 shadow-inner">
+                                        <Music size={64} className="text-blue-500" />
+                                    </div>
+                                </div>
+
+                                <div className="text-center mb-8 w-full">
+                                    <h4 className="text-lg font-bold text-white mb-1 truncate px-4">{previewFile.name}</h4>
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
+                                        <Activity size={12} /> Local Audio
+                                    </span>
+                                </div>
+
+                                <audio controls autoPlay src={previewFile.url} className="w-full h-10 rounded-lg" />
+                            </div>
                         )}
                         {previewFile.type === 'video' && (
                             <video controls autoPlay src={previewFile.url} className="max-w-full max-h-[70vh]" />
