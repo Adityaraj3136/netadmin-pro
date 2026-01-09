@@ -3097,6 +3097,16 @@ export default function App() {
       }
   };
 
+  // Reset audio player state when preview file changes
+  useEffect(() => {
+    if (previewFile?.type === 'audio') {
+      setAudioPlayerState({ playing: false, currentTime: 0, duration: 0, volume: 1 });
+      if (audioRef.current) {
+        audioRef.current.volume = 1;
+      }
+    }
+  }, [previewFile]);
+
   // Keyboard Navigation for Preview
   useEffect(() => {
       if (!previewFile) return;
@@ -3227,12 +3237,23 @@ export default function App() {
                                 {/* Custom Audio Player */}
                                 <div className="w-full space-y-4">
                                     <audio 
+                                        key={previewFile.url}
                                         ref={audioRef} 
                                         src={previewFile.url}
-                                        onLoadedMetadata={() => audioRef.current && setAudioPlayerState(p => ({ ...p, duration: audioRef.current.duration }))}
-                                        onTimeUpdate={() => audioRef.current && setAudioPlayerState(p => ({ ...p, currentTime: audioRef.current.currentTime }))}
+                                        crossOrigin="anonymous"
+                                        onLoadedMetadata={() => {
+                                            if (audioRef.current) {
+                                                setAudioPlayerState(p => ({ ...p, duration: audioRef.current.duration }));
+                                            }
+                                        }}
+                                        onTimeUpdate={() => {
+                                            if (audioRef.current) {
+                                                setAudioPlayerState(p => ({ ...p, currentTime: audioRef.current.currentTime }));
+                                            }
+                                        }}
                                         onPlay={() => setAudioPlayerState(p => ({ ...p, playing: true }))}
                                         onPause={() => setAudioPlayerState(p => ({ ...p, playing: false }))}
+                                        onEnded={() => setAudioPlayerState(p => ({ ...p, playing: false }))}
                                         className="hidden"
                                     />
                                     
