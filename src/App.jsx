@@ -3060,16 +3060,24 @@ export default function App() {
       if (file.fileObj) {
           // It's a real local file
           const url = URL.createObjectURL(file.fileObj);
-          const type = file.fileObj.type;
+          const mimeType = file.fileObj.type;
+          const lowerName = file.name.toLowerCase();
           
-          if (type.startsWith('image/')) {
-              setPreviewFile({ name: file.name, type: 'image', url, index });
-          } else if (type.startsWith('audio/')) {
-              setPreviewFile({ name: file.name, type: 'audio', url, index });
-          } else if (type.startsWith('video/')) {
-              setPreviewFile({ name: file.name, type: 'video', url, index });
+          // Determine type by MIME or fallback to extension
+          let previewType = null;
+          
+          if (mimeType.startsWith('image/') || lowerName.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/)) {
+              previewType = 'image';
+          } else if (mimeType.startsWith('audio/') || lowerName.match(/\.(mp3|wav|m4a|ogg|flac|aac|wma)$/)) {
+              previewType = 'audio';
+          } else if (mimeType.startsWith('video/') || lowerName.match(/\.(mp4|mkv|mov|webm|avi)$/)) {
+              previewType = 'video';
+          }
+          
+          if (previewType) {
+              setPreviewFile({ name: file.name, type: previewType, url, index });
           } else {
-              showToast(`Preview not available for this file`, 'warning');
+              showToast(`Preview not available for this file type`, 'warning');
           }
       } else {
           // Mock file - detect type from filename extension
