@@ -836,6 +836,8 @@ export default function App() {
   const [storageFiles, setStorageFiles] = useState(MOCK_FILES);
   const [isLocalMount, setIsLocalMount] = useState(false);
   const [previewFile, setPreviewFile] = useState(null); // { name, type, url }
+  const [audioPlayerState, setAudioPlayerState] = useState({ playing: false, currentTime: 0, duration: 0, volume: 1 });
+  const audioRef = useRef(null);
   const [currentDirHandle, setCurrentDirHandle] = useState(null);
   const [dirHistory, setDirHistory] = useState([]); // Stack of { handle, name }
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
@@ -3202,7 +3204,87 @@ export default function App() {
                                     </span>
                                 </div>
 
-                                <audio controls autoPlay src={previewFile.url} className="w-full h-10 rounded-lg accent-blue-600" />
+                                {/* Custom Audio Player */}
+                                <div className="w-full space-y-4">
+                                    <audio 
+                                        ref={audioRef} 
+                                        src={previewFile.url}
+                                        onLoadedMetadata={() => audioRef.current && setAudioPlayerState(p => ({ ...p, duration: audioRef.current.duration }))}
+                                        onTimeUpdate={() => audioRef.current && setAudioPlayerState(p => ({ ...p, currentTime: audioRef.current.currentTime }))}
+                                        onPlay={() => setAudioPlayerState(p => ({ ...p, playing: true }))}
+                                        onPause={() => setAudioPlayerState(p => ({ ...p, playing: false }))}
+                                        className="hidden"
+                                    />
+                                    
+                                    {/* Progress Bar */}
+                                    <div className="space-y-2">
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max={audioPlayerState.duration || 0}
+                                            value={audioPlayerState.currentTime}
+                                            onChange={(e) => {
+                                                const time = parseFloat(e.target.value);
+                                                setAudioPlayerState(p => ({ ...p, currentTime: time }));
+                                                if (audioRef.current) audioRef.current.currentTime = time;
+                                            }}
+                                            className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                        />
+                                        <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                            <span>{Math.floor(audioPlayerState.currentTime / 60)}:{String(Math.floor(audioPlayerState.currentTime % 60)).padStart(2, '0')}</span>
+                                            <span>{Math.floor(audioPlayerState.duration / 60)}:{String(Math.floor(audioPlayerState.duration % 60)).padStart(2, '0')}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Controls */}
+                                    <div className="flex items-center gap-4 justify-center">
+                                        {/* Volume Control */}
+                                        <div className="flex items-center gap-2">
+                                            <Volume2 size={18} className="text-slate-500 dark:text-slate-400" />
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="1" 
+                                                step="0.1"
+                                                value={audioPlayerState.volume}
+                                                onChange={(e) => {
+                                                    const vol = parseFloat(e.target.value);
+                                                    setAudioPlayerState(p => ({ ...p, volume: vol }));
+                                                    if (audioRef.current) audioRef.current.volume = vol;
+                                                }}
+                                                className="w-20 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                            />
+                                        </div>
+
+                                        {/* Play/Pause Button */}
+                                        <button
+                                            onClick={() => {
+                                                if (audioRef.current) {
+                                                    if (audioPlayerState.playing) {
+                                                        audioRef.current.pause();
+                                                    } else {
+                                                        audioRef.current.play();
+                                                    }
+                                                }
+                                            }}
+                                            className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all transform hover:scale-105"
+                                        >
+                                            {audioPlayerState.playing ? <Pause size={24} /> : <Play size={24} className="ml-0.5" />}
+                                        </button>
+
+                                        {/* Mute Button */}
+                                        <button
+                                            onClick={() => {
+                                                const newVol = audioPlayerState.volume === 0 ? 1 : 0;
+                                                setAudioPlayerState(p => ({ ...p, volume: newVol }));
+                                                if (audioRef.current) audioRef.current.volume = newVol;
+                                            }}
+                                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors"
+                                        >
+                                            {audioPlayerState.volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                         {previewFile.type === 'video' && (
