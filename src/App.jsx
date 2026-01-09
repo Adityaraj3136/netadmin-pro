@@ -171,12 +171,12 @@ const Card = ({ title, children, className = "", actions, noPadding = false, inf
   const [showInfo, setShowInfo] = useState(false);
 
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden ${className} relative`}>
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-100 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm">
+    <div className={`bg-white dark:bg-slate-800 rounded-sm shadow-[0_1px_3px_rgba(0,0,0,0.1)] border border-[#ACD1E9] dark:border-slate-700 overflow-hidden ${className} relative`}>
+      <div className="px-6 py-3 border-b border-[#ACD1E9] dark:border-slate-700 font-bold text-[#3679C8] dark:text-slate-100 flex justify-between items-center bg-[#EBF6FA] dark:bg-slate-800/50">
         <div className="flex items-center gap-2">
             {title}
             {info && (
-                <button onClick={() => setShowInfo(true)} className="text-slate-400 hover:text-blue-500 transition-colors" title="More Info">
+                <button onClick={() => setShowInfo(true)} className="text-[#4ACBD6] hover:text-[#3679C8] transition-colors" title="More Info">
                     <Info size={16} />
                 </button>
             )}
@@ -187,10 +187,10 @@ const Card = ({ title, children, className = "", actions, noPadding = false, inf
 
       {showInfo && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-lg w-full border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                    <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                        <Info size={20} className="text-blue-500"/>
+            <div className="bg-white dark:bg-slate-800 rounded-sm shadow-2xl max-w-lg w-full border border-[#ACD1E9] dark:border-slate-700 overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#ACD1E9] dark:border-slate-700 flex justify-between items-center bg-[#EBF6FA] dark:bg-slate-900/50">
+                    <h3 className="font-bold text-lg text-[#3679C8] dark:text-white flex items-center gap-2">
+                        <Info size={20} className="text-[#4ACBD6]"/>
                         About {title}
                     </h3>
                     <button onClick={() => setShowInfo(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -199,21 +199,21 @@ const Card = ({ title, children, className = "", actions, noPadding = false, inf
                 </div>
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                     <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2">Feature Description</h4>
+                        <h4 className="text-sm font-bold text-[#3679C8] dark:text-white uppercase tracking-wider mb-2">Feature Description</h4>
                         <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{info.description}</p>
                     </div>
                     <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2">How to Use</h4>
+                        <h4 className="text-sm font-bold text-[#3679C8] dark:text-white uppercase tracking-wider mb-2">How to Use</h4>
                         <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{info.usage}</p>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-700">
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <div className="bg-[#F7F7F7] dark:bg-slate-900/50 p-4 rounded-sm border border-[#ACD1E9] dark:border-slate-700">
+                        <h4 className="text-sm font-bold text-[#3679C8] dark:text-white uppercase tracking-wider mb-2 flex items-center gap-2">
                             <Cpu size={14} /> Technical Explanation
                         </h4>
                         <p className="text-slate-600 dark:text-slate-400 text-xs font-mono leading-relaxed">{info.technical}</p>
                     </div>
                 </div>
-                <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                <div className="px-6 py-4 bg-[#F7F7F7] dark:bg-slate-900/50 border-t border-[#ACD1E9] dark:border-slate-700 flex justify-end">
                     <Button onClick={() => setShowInfo(false)}>Close</Button>
                 </div>
             </div>
@@ -226,12 +226,12 @@ const Card = ({ title, children, className = "", actions, noPadding = false, inf
 const Toggle = ({ enabled, onChange, label, subLabel }) => (
   <div className="flex items-center justify-between py-3">
     <div>
-       <span className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+       <span className="block text-sm font-bold text-[#333] dark:text-slate-300">{label}</span>
        {subLabel && <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subLabel}</span>}
     </div>
     <button
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-[#4ACBD6]' : 'bg-[#ccc] dark:bg-slate-600'}`}
     >
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
@@ -240,16 +240,16 @@ const Toggle = ({ enabled, onChange, label, subLabel }) => (
 
 const Input = ({ label, value, onChange, type = "text", error, disabled, placeholder }) => (
   <div className="mb-4">
-    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
+    <label className="block text-sm font-bold text-[#333] dark:text-slate-300 mb-1">{label}</label>
     <input
       type={type}
       value={value}
       onChange={onChange}
       disabled={disabled}
       placeholder={placeholder}
-      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white transition-colors
-        ${error ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}
-        ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''}
+      className={`w-full px-3 py-2 border rounded-sm shadow-none focus:outline-none focus:ring-2 focus:ring-[#4ACBD6] focus:border-[#4ACBD6] bg-white dark:bg-slate-900 dark:text-white transition-colors
+        ${error ? 'border-red-500' : 'border-[#ccc] dark:border-slate-600'}
+        ${disabled ? 'opacity-50 cursor-not-allowed bg-[#f0f0f0] dark:bg-slate-800' : ''}
       `}
     />
     {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
@@ -258,11 +258,11 @@ const Input = ({ label, value, onChange, type = "text", error, disabled, placeho
 
 const Select = ({ label, value, onChange, options }) => (
   <div className="mb-4">
-    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
+    <label className="block text-sm font-bold text-[#333] dark:text-slate-300 mb-1">{label}</label>
     <select
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white"
+      className="w-full px-3 py-2 border border-[#ccc] dark:border-slate-600 rounded-sm shadow-none focus:outline-none focus:ring-2 focus:ring-[#4ACBD6] focus:border-[#4ACBD6] bg-white dark:bg-slate-900 dark:text-white"
     >
       {options.map(opt => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -272,12 +272,12 @@ const Select = ({ label, value, onChange, options }) => (
 );
 
 const Button = ({ children, onClick, variant = 'primary', icon: Icon, disabled, className="" }) => {
-  const base = "inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed";
+  const base = "inline-flex items-center px-4 py-2 border text-sm font-bold rounded-sm shadow-none focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide";
   const variants = {
-    primary: "border-transparent text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500",
-    danger: "border-transparent text-white bg-red-600 hover:bg-red-700 focus:ring-red-500",
-    secondary: "border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700",
-    success: "border-transparent text-white bg-green-600 hover:bg-green-700 focus:ring-green-500"
+    primary: "border-transparent text-white bg-[#4ACBD6] hover:bg-[#3ABBC6] focus:ring-[#4ACBD6]",
+    danger: "border-transparent text-white bg-[#FF6B6B] hover:bg-[#FF5252] focus:ring-[#FF6B6B]",
+    secondary: "border-[#4ACBD6] text-[#4ACBD6] bg-white dark:bg-slate-800 hover:bg-[#EBF6FA] dark:hover:bg-slate-700",
+    success: "border-transparent text-white bg-[#6BCB77] hover:bg-[#5AB866] focus:ring-[#6BCB77]"
   };
 
   return (
@@ -574,13 +574,13 @@ const TerminalCLI = ({ config, updateConfig, setRebooting, onFactoryReset, role,
 const SidebarItem = ({ id, label, icon: Icon, activeTab, onClick }) => (
   <button 
       onClick={() => onClick(id)} 
-      className={`group w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all rounded-lg mb-1 ${
+      className={`group w-full flex items-center gap-3 px-6 py-3 text-sm font-bold transition-all border-l-4 ${
           activeTab === id 
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-[#2E68AD] border-[#4ACBD6] text-white' 
+              : 'border-transparent text-blue-100 hover:bg-[#2E68AD] hover:text-white'
       }`}
   >
-    <Icon className={`h-5 w-5 transition-colors ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
+    <Icon className={`h-5 w-5 transition-colors ${activeTab === id ? 'text-[#4ACBD6]' : 'text-blue-200 group-hover:text-white'}`} />
     {label}
   </button>
 );
@@ -1999,54 +1999,54 @@ export default function App() {
       <div className="lg:col-span-8 flex flex-col gap-6">
           {/* Top Row: Hero Status Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[200px]">
-                <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4"><Globe size={120} /></div>
+              <div className="bg-[#4ACBD6] rounded-sm p-6 text-white shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+                <div className="absolute right-0 top-0 opacity-20 transform translate-x-4 -translate-y-4"><Globe size={120} /></div>
                 <div className="relative z-10">
-                    <p className="text-blue-100 text-sm font-medium mb-1">Internet Status</p>
-                    <h3 className="text-2xl xl:text-3xl font-bold flex items-center gap-2"><CheckCircle className="h-6 w-6 text-green-400" /> Connected</h3>
+                    <p className="text-white/80 text-sm font-bold mb-1 uppercase tracking-wider">Internet Status</p>
+                    <h3 className="text-2xl xl:text-3xl font-bold flex items-center gap-2"><CheckCircle className="h-6 w-6 text-white" /> Connected</h3>
                 </div>
                 <div className="relative z-10 mt-4">
-                    <div className="flex flex-col gap-2 text-xs font-mono bg-black/20 p-3 rounded-lg w-full">
-                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
-                          <span className="opacity-50 uppercase">Type</span> 
-                          <span className="uppercase">{config.wan.type === 'dhcp' ? 'Dynamic IP (DHCP)' : config.wan.type === 'static' ? 'Static IP' : config.wan.type === 'pppoe' ? 'PPPoE' : config.wan.type}</span>
+                    <div className="flex flex-col gap-2 text-xs font-mono bg-white/10 p-3 rounded-sm w-full border border-white/20">
+                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
+                          <span className="opacity-70 uppercase">Type</span> 
+                          <span className="uppercase font-bold">{config.wan.type === 'dhcp' ? 'Dynamic IP (DHCP)' : config.wan.type === 'static' ? 'Static IP' : config.wan.type === 'pppoe' ? 'PPPoE' : config.wan.type}</span>
                       </div>
-                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
-                          <span className="opacity-50 uppercase">WAN IP</span> 
-                          <span>{config.operationMode === 'ap' ? config.lan.ip : config.wan.ip}</span>
+                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
+                          <span className="opacity-70 uppercase">WAN IP</span> 
+                          <span className="font-bold">{config.operationMode === 'ap' ? config.lan.ip : config.wan.ip}</span>
                       </div>
-                      <div className="flex justify-between border-b border-white/10 pb-1 mb-1">
-                          <span className="opacity-50 uppercase">Gateway</span> 
-                          <span>{config.operationMode === 'ap' ? config.lan.gateway : config.wan.gateway}</span>
+                      <div className="flex justify-between border-b border-white/20 pb-1 mb-1">
+                          <span className="opacity-70 uppercase">Gateway</span> 
+                          <span className="font-bold">{config.operationMode === 'ap' ? config.lan.gateway : config.wan.gateway}</span>
                       </div>
                       <div className="flex justify-between">
-                          <span className="opacity-50 uppercase">DNS</span> 
-                          <span>{config.wan.type === 'static' && config.wan.dns === 'auto' ? '8.8.8.8' : (config.wan.dns === 'auto' ? 'Auto (ISP)' : config.wan.dns)}</span>
+                          <span className="opacity-70 uppercase">DNS</span> 
+                          <span className="font-bold">{config.wan.type === 'static' && config.wan.dns === 'auto' ? '8.8.8.8' : (config.wan.dns === 'auto' ? 'Auto (ISP)' : config.wan.dns)}</span>
                       </div>
                     </div>
                 </div>
               </div>
 
-              <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+              <div className="md:col-span-1 xl:col-span-2 bg-white dark:bg-slate-800 rounded-sm p-6 shadow-sm border border-[#ACD1E9] dark:border-slate-700 flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-2">
                     <div className="w-full">
-                      <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Real-time Throughput</p>
+                      <p className="text-[#3679C8] dark:text-slate-400 text-sm font-bold uppercase tracking-wider">Real-time Throughput</p>
                       <div className="grid grid-cols-2 gap-4 mt-3">
                           <div>
                               <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Download</span>
+                                  <div className="w-2 h-2 rounded-full bg-[#6BCB77] animate-pulse"></div>
+                                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Download</span>
                               </div>
-                              <div className="text-2xl xl:text-3xl font-bold dark:text-white tabular-nums tracking-tight">
+                              <div className="text-2xl xl:text-3xl font-bold text-[#333] dark:text-white tabular-nums tracking-tight">
                                   {formatBytes(trafficHistory[trafficHistory.length-1].down * 1024 * 1024 / 8)}/s
                               </div>
                           </div>
                           <div>
                               <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                                  <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Upload</span>
+                                  <div className="w-2 h-2 rounded-full bg-[#4ACBD6] animate-pulse"></div>
+                                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Upload</span>
                               </div>
-                              <div className="text-2xl xl:text-3xl font-bold dark:text-white tabular-nums tracking-tight">
+                              <div className="text-2xl xl:text-3xl font-bold text-[#333] dark:text-white tabular-nums tracking-tight">
                                   {formatBytes(trafficHistory[trafficHistory.length-1].up * 1024 * 1024 / 8)}/s
                               </div>
                           </div>
@@ -3160,6 +3160,11 @@ export default function App() {
                  </div>
               </div>
            </div>
+           
+           <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-center gap-2 text-xs text-slate-400">
+               <Shield size={12} className="text-green-500" />
+               <span>Your privacy is important. All file operations are performed locally on your device. No data is uploaded to any server.</span>
+           </div>
         </Card>
 
         {/* File Preview Modal */}
@@ -3182,7 +3187,23 @@ export default function App() {
                             <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-[70vh] object-contain" />
                         )}
                         {previewFile.type === 'audio' && (
-                            <audio controls autoPlay src={previewFile.url} className="w-full max-w-md" />
+                            <div className="flex flex-col items-center justify-center w-full max-w-md p-8 bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-2xl">
+                                <div className="relative mb-8">
+                                    <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
+                                    <div className="relative w-40 h-40 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center border border-slate-700 shadow-inner">
+                                        <Music size={64} className="text-blue-500" />
+                                    </div>
+                                </div>
+                                
+                                <div className="text-center mb-8 w-full">
+                                    <h4 className="text-lg font-bold text-white mb-1 truncate px-4">{previewFile.name}</h4>
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
+                                        <Activity size={12} /> Local Audio
+                                    </span>
+                                </div>
+
+                                <audio controls autoPlay src={previewFile.url} className="w-full h-10 rounded-lg" />
+                            </div>
                         )}
                         {previewFile.type === 'video' && (
                             <video controls autoPlay src={previewFile.url} className="max-w-full max-h-[70vh]" />
@@ -3780,8 +3801,8 @@ key client.key`}</pre>
         };
 
         return (
-            <div className="absolute z-50 w-64 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 text-left pointer-events-none animate-fade-in-up" style={style}>
-                <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-slate-700 pb-2">
+            <div className="absolute z-50 w-64 bg-white dark:bg-slate-800 p-4 rounded-sm shadow-xl border border-[#ACD1E9] dark:border-slate-700 text-left pointer-events-none animate-fade-in-up" style={style}>
+                <h4 className="font-bold text-[#3679C8] dark:text-white flex items-center gap-2 mb-3 border-b border-[#ACD1E9] dark:border-slate-700 pb-2">
                     {icon} {title}
                 </h4>
                 <div className="space-y-2 text-xs">
@@ -3799,7 +3820,7 @@ key client.key`}</pre>
                             <div className="flex justify-between"><span className="text-slate-500">Uptime</span> <span className="text-slate-700 dark:text-slate-300">{Math.floor(uptime / 3600)}h {(uptime % 60)}s</span></div>
                             <div className="flex justify-between"><span className="text-slate-500">Firmware</span> <span className="text-slate-700 dark:text-slate-300">{detailData.firmware}</span></div>
                             <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 mt-1">
-                                <div className="bg-indigo-500 h-1.5 rounded-full" style={{width: `${detailData.cpuLoad}%`}}></div>
+                                <div className="bg-[#4ACBD6] h-1.5 rounded-full" style={{width: `${detailData.cpuLoad}%`}}></div>
                             </div>
                             <div className="text-[10px] text-right text-slate-400">CPU Load</div>
                         </>
@@ -3808,15 +3829,15 @@ key client.key`}</pre>
                         <>
                             <div className="flex justify-between"><span className="text-slate-500">IP Address</span> <span className="font-mono text-slate-700 dark:text-slate-300">{detailData.ip}</span></div>
                             <div className="flex justify-between"><span className="text-slate-500">MAC</span> <span className="font-mono text-slate-700 dark:text-slate-300">{detailData.mac}</span></div>
-                            <div className="flex justify-between"><span className="text-slate-500">Status</span> <span className={detailData.status === 'online' ? 'text-green-500' : 'text-slate-400'}>{detailData.status}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">Status</span> <span className={detailData.status === 'online' ? 'text-[#6BCB77]' : 'text-slate-400'}>{detailData.status}</span></div>
                             {detailData.status === 'online' && !detailData.blocked && (
-                                <div className="flex justify-between"><span className="text-slate-500">Usage</span> <span className="text-blue-500">{detailData.usage || Math.floor(Math.random()*20)} Mbps</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Usage</span> <span className="text-[#3679C8]">{detailData.usage || Math.floor(Math.random()*20)} Mbps</span></div>
                             )}
                         </>
                     )}
                 </div>
                 {/* Little triangle pointer */}
-                <div className="absolute left-1/2 bottom-0 w-3 h-3 bg-white dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 transform translate-y-1/2 -translate-x-1/2 rotate-45"></div>
+                <div className="absolute left-1/2 bottom-0 w-3 h-3 bg-white dark:bg-slate-800 border-b border-r border-[#ACD1E9] dark:border-slate-700 transform translate-y-1/2 -translate-x-1/2 rotate-45"></div>
             </div>
         );
     };
@@ -3825,7 +3846,7 @@ key client.key`}</pre>
       <div className="max-w-6xl mx-auto h-full flex flex-col" onClick={() => setContextMenu(null)}>
         <Card 
             title="Interactive Topology Map" 
-            className="flex-1 min-h-[600px] relative overflow-hidden bg-slate-100 dark:bg-slate-900/50" 
+            className="flex-1 min-h-[600px] relative overflow-hidden bg-[#F4F5F7] dark:bg-slate-900/50" 
             noPadding
         >
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
@@ -4235,11 +4256,11 @@ key client.key`}</pre>
   }
 
   return (
-    <div className={`min-h-screen flex ${darkMode ? 'dark bg-slate-900' : 'bg-slate-100'}`}>
+    <div className={`min-h-screen flex ${darkMode ? 'dark bg-slate-900' : 'bg-[#F4F5F7]'}`}>
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded shadow-lg text-white text-sm font-medium animate-bounce-in ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'danger' ? 'bg-red-600' : 'bg-blue-600'}`}>{toast.message}</div>}
 
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 md:relative md:translate-x-0 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex-shrink-0"><Globe className="h-6 w-6 text-blue-600 mr-2" /><span className="text-xl font-bold text-slate-800 dark:text-white">NetAdmin<span className="text-blue-600">Pro</span></span></div>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#3679C8] dark:bg-slate-900 border-r border-[#3679C8] dark:border-slate-800 transform transition-transform duration-200 md:relative md:translate-x-0 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-16 flex items-center px-6 border-b border-[#4ACBD6]/30 dark:border-slate-800 bg-[#3679C8] dark:bg-slate-950 flex-shrink-0"><Globe className="h-6 w-6 text-white mr-2" /><span className="text-xl font-bold text-white">NetAdmin<span className="text-[#4ACBD6]">Pro</span></span></div>
         <nav className="mt-6 flex flex-col gap-1 overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
           <SidebarItem id="dashboard" label="Dashboard" icon={Activity} activeTab={activeTab} onClick={handleTabChange} />
           <SidebarItem id="topology" label="Topology Map" icon={Share2} activeTab={activeTab} onClick={handleTabChange} />
@@ -4258,22 +4279,22 @@ key client.key`}</pre>
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden" onClick={() => {if(showUserMenu) setShowUserMenu(false)}}>
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 shadow-sm z-20">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-[#ACD1E9] dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 shadow-sm z-20">
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden text-slate-500">{isMobileMenuOpen ? <X /> : <Menu />}</button>
-          <div className="flex-1 px-4 text-slate-800 dark:text-slate-200 font-medium truncate flex items-center gap-2">
-             <Server size={16} className="text-slate-400"/> {config.system.hostname} <span className="text-slate-300">/</span> {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          <div className="flex-1 px-4 text-[#3679C8] dark:text-slate-200 font-bold truncate flex items-center gap-2">
+             <Server size={16} className="text-[#4ACBD6]"/> {config.system.hostname} <span className="text-slate-300">/</span> {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
           </div>
           <div className="flex items-center gap-4">
              {/* Notification Center */}
              <div className="relative">
                 <button 
                     onClick={(e) => { e.stopPropagation(); setShowNotifications(!showNotifications); setShowUserMenu(false); }}
-                    className="relative text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="relative text-[#3679C8] hover:text-[#4ACBD6] dark:hover:text-slate-300 transition-colors p-2 rounded-full hover:bg-[#EBF6FA] dark:hover:bg-slate-800"
                 >
                     <div className="relative">
                         <Bell className="h-5 w-5" />
                         {notifications.filter(n => !n.read).length > 0 && (
-                            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white dark:border-slate-900">
+                            <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#FF6B6B] rounded-full text-[10px] text-white flex items-center justify-center font-bold border-2 border-white dark:border-slate-900">
                                 {notifications.filter(n => !n.read).length}
                             </span>
                         )}
@@ -4281,17 +4302,17 @@ key client.key`}</pre>
                 </button>
                 
                 {showNotifications && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50 animate-fade-in-up origin-top-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                            <h3 className="font-bold text-sm text-slate-700 dark:text-slate-200">Notifications</h3>
-                            <button onClick={() => setNotifications([])} className="text-xs text-blue-500 hover:text-blue-700">Clear All</button>
+                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-sm shadow-xl border border-[#ACD1E9] dark:border-slate-700 overflow-hidden z-50 animate-fade-in-up origin-top-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-3 border-b border-[#ACD1E9] dark:border-slate-700 flex justify-between items-center bg-[#EBF6FA] dark:bg-slate-900/50">
+                            <h3 className="font-bold text-sm text-[#3679C8] dark:text-slate-200">Notifications</h3>
+                            <button onClick={() => setNotifications([])} className="text-xs text-[#4ACBD6] hover:text-[#3679C8]">Clear All</button>
                         </div>
                         <div className="max-h-80 overflow-y-auto">
                             {notifications.length === 0 ? (
                                 <div className="p-8 text-center text-slate-400 text-sm">No new notifications</div>
                             ) : (
                                 notifications.map(n => (
-                                    <div key={n.id} className={`p-3 border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${!n.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                                    <div key={n.id} className={`p-3 border-b border-slate-50 dark:border-slate-700/50 hover:bg-[#EBF6FA] dark:hover:bg-slate-700/30 transition-colors ${!n.read ? 'bg-[#EBF6FA]/50 dark:bg-blue-900/10' : ''}`}>
                                         <div className="flex gap-3">
                                             <div className={`mt-1 p-1.5 rounded-full h-fit ${
                                                 n.type === 'danger' ? 'bg-red-100 text-red-600' : 
@@ -4314,35 +4335,35 @@ key client.key`}</pre>
                 )}
              </div>
 
-             <button onClick={() => setDarkMode(!darkMode)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">{darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
+             <button onClick={() => setDarkMode(!darkMode)} className="text-[#3679C8] hover:text-[#4ACBD6] dark:hover:text-slate-300 transition-colors p-2 rounded-full hover:bg-[#EBF6FA] dark:hover:bg-slate-800">{darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}</button>
              
              {/* USER MENU DROPDOWN */}
              <div className="relative">
                  <div 
-                    className="flex items-center gap-2 cursor-pointer border-l pl-4 border-slate-200 dark:border-slate-700 group"
+                    className="flex items-center gap-2 cursor-pointer border-l pl-4 border-[#ACD1E9] dark:border-slate-700 group"
                     onClick={(e) => {
                         e.stopPropagation();
                         setShowUserMenu(!showUserMenu);
                     }}
                  >
                     <div className="text-right hidden sm:block">
-                       <div className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-600 transition-colors">{session?.user ? session.user.charAt(0).toUpperCase() + session.user.slice(1) : 'User'}</div>
-                       <div className="text-[10px] text-green-500">Logged In</div>
+                       <div className="text-xs font-bold text-[#3679C8] dark:text-slate-200 group-hover:text-[#4ACBD6] transition-colors">{session?.user ? session.user.charAt(0).toUpperCase() + session.user.slice(1) : 'User'}</div>
+                       <div className="text-[10px] text-[#6BCB77]">Logged In</div>
                     </div>
-                    <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-xs shadow-inner ring-2 ring-transparent group-hover:ring-blue-100 transition-all">
+                    <div className="h-8 w-8 rounded-full bg-[#EBF6FA] dark:bg-blue-900 flex items-center justify-center text-[#3679C8] dark:text-blue-300 font-bold text-xs shadow-inner ring-2 ring-transparent group-hover:ring-[#4ACBD6] transition-all">
                         {session?.user ? session.user.substring(0, 2).toUpperCase() : 'US'}
                     </div>
-                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={14} className={`text-[#3679C8] transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
                  </div>
                  
                  {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-fade-in-down origin-top-right">
-                        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-sm shadow-xl border border-[#ACD1E9] dark:border-slate-700 py-1 z-50 animate-fade-in-down origin-top-right">
+                        <div className="px-4 py-2 border-b border-[#ACD1E9] dark:border-slate-700">
                             <p className="text-sm font-medium text-slate-900 dark:text-white">{session?.role ? session.role.charAt(0).toUpperCase() + session.role.slice(1) : 'User'}</p>
                             <p className="text-xs text-slate-500 truncate">{session?.user || 'user'}@local</p>
                         </div>
                         <button 
-                            className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
+                            className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-[#EBF6FA] dark:hover:bg-slate-700 flex items-center gap-2 transition-colors"
                             onClick={() => {
                                 setShowUserMenu(false);
                                 setActiveTab('tools');
@@ -4362,7 +4383,7 @@ key client.key`}</pre>
           </div>
         </header>
 
-        <div ref={mainContentRef} className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-950 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+        <div ref={mainContentRef} className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 bg-[#F4F5F7] dark:bg-slate-950 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
            {activeTab === 'dashboard' && renderDashboard()}
            {activeTab === 'topology' && renderTopology()}
            {activeTab === 'terminal' && renderTerminal()}
