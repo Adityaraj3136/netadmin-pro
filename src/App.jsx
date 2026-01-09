@@ -3187,22 +3187,22 @@ export default function App() {
                             <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-[70vh] object-contain" />
                         )}
                         {previewFile.type === 'audio' && (
-                            <div className="flex flex-col items-center justify-center w-full max-w-md p-8 bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/50 shadow-2xl">
+                            <div className="flex flex-col items-center justify-center w-full max-w-md p-8 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-2xl">
                                 <div className="relative mb-8">
-                                    <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
-                                    <div className="relative w-40 h-40 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center border border-slate-700 shadow-inner">
-                                        <Music size={64} className="text-blue-500" />
+                                    <div className="absolute inset-0 bg-blue-500 blur-xl opacity-10 rounded-full animate-pulse"></div>
+                                    <div className="relative w-40 h-40 bg-gradient-to-br from-blue-50 dark:from-slate-700 to-blue-100 dark:to-slate-800 rounded-full flex items-center justify-center border border-blue-200 dark:border-slate-600 shadow-inner">
+                                        <Music size={64} className="text-blue-600 dark:text-blue-400" />
                                     </div>
                                 </div>
                                 
                                 <div className="text-center mb-8 w-full">
-                                    <h4 className="text-lg font-bold text-white mb-1 truncate px-4">{previewFile.name}</h4>
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-medium border border-blue-500/20">
+                                    <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1 truncate px-4">{previewFile.name}</h4>
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-medium border border-blue-200 dark:border-blue-500/30">
                                         <Activity size={12} /> Local Audio
                                     </span>
                                 </div>
 
-                                <audio controls autoPlay src={previewFile.url} className="w-full h-10 rounded-lg" />
+                                <audio controls autoPlay src={previewFile.url} className="w-full h-10 rounded-lg accent-blue-600" />
                             </div>
                         )}
                         {previewFile.type === 'video' && (
