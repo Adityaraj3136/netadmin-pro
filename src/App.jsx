@@ -7,7 +7,7 @@ import {
   Cloud, Laptop, Share2, Sliders, Clock, Key, Layers, 
   BarChart2, AlertOctagon, Zap, Trash2, Plus, HardDrive, 
   Folder, FileText, Film, Music, Image as ImageIcon, Move,
-  User, ChevronDown, ChevronLeft, ChevronRight, Edit2, Link, ClipboardList, Gauge, StopCircle, Video, Bell, Heart, Eye, EyeOff, ExternalLink, Loader, Wrench, Info, ArrowLeft
+  User, ChevronDown, ChevronLeft, ChevronRight, Edit2, Link, ClipboardList, Gauge, StopCircle, Video, Bell, Heart, Eye, EyeOff, ExternalLink, Loader, Wrench, Info, ArrowLeft, Volume2, VolumeX
 } from 'lucide-react';
 
 // --- UTILITIES & MOCK DATA ---
