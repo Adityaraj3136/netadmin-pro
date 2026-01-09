@@ -3072,8 +3072,28 @@ export default function App() {
               showToast(`Preview not available for this file`, 'warning');
           }
       } else {
-          // Mock file
-          showToast(`Preview not available for this file`, 'info');
+          // Mock file - detect type from filename extension
+          const lowerName = file.name.toLowerCase();
+          let previewType = null;
+          let mockUrl = null;
+          
+          if (lowerName.endsWith('.mp3') || lowerName.endsWith('.wav') || lowerName.endsWith('.m4a') || lowerName.endsWith('.ogg')) {
+              previewType = 'audio';
+              // Create a data URL for demo purposes
+              mockUrl = 'data:audio/mpeg;base64,ID3BAAAAAAAjTBAAAAANFTVUyAAAADAAAAGxhdmY1OS4yNy4xMDA=';
+          } else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.png') || lowerName.endsWith('.gif')) {
+              previewType = 'image';
+          } else if (lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv') || lowerName.endsWith('.mov') || lowerName.endsWith('.webm')) {
+              previewType = 'video';
+          }
+          
+          if (previewType && mockUrl) {
+              setPreviewFile({ name: file.name, type: previewType, url: mockUrl, index });
+          } else if (previewType && !mockUrl) {
+              showToast(`Preview available but no mock file provided`, 'info');
+          } else {
+              showToast(`Preview not available for this file`, 'info');
+          }
       }
   };
 
